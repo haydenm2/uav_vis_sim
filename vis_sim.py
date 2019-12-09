@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits import mplot3d
@@ -24,8 +26,8 @@ if __name__ == "__main__":
     h = 40
     x = np.array([[-r], [0], [h]])
     xt = np.array([[0], [0], [0]])
-    rpy = np.array([20, 0, 0])
-    rpyg = np.array([20, 0, 0])
+    rpy = np.array([20, 10, 10])
+    rpyg = np.array([20, 10, 10])
 
     phi_fov = np.deg2rad(45)
     phi_g = np.deg2rad(rpyg[0])
@@ -54,6 +56,7 @@ if __name__ == "__main__":
 
     # general plotting
     linedist = 100
+    plt_rng = 100
     uav_length = 15
     endpoint = np.array([[0], [-linedist]])
 
@@ -69,14 +72,18 @@ if __name__ == "__main__":
     pose_point = ax.plot3D(x[0], x[1], x[2], 'ko', MarkerFaceColor='k')
     pose_line = ax.plot3D([x[0], x[0]], [x[1], x[1]], [x[2], 0], 'k--')
     pose_target = ax.plot3D(xt[0], xt[1], xt[2], 'ro', MarkerFaceColor='r')
+    lfovbase = np.array([[0], [0], [1]])
     lfov = np.array([[0, 0], [0, 0], [0, 200]])
     lquiv = np.array([[-uav_length/2, uav_length/2], [0, 0], [0, 0]])
     lcamx = np.array([[0, 10], [0, 0], [0, 0]])
     lbNorth = np.array([[0, 10], [0, 0], [0, 0]])
-    rng = 100
-    ax.set_xlim(-rng, rng)
-    ax.set_ylim(-rng, rng)
-    ax.set_zlim(-2, rng)
+    e1 = np.array([[1], [0], [0]])
+    e2 = np.array([[0], [1], [0]])
+    e3 = np.array([[0], [0], [1]])
+
+    ax.set_xlim(-plt_rng, plt_rng)
+    ax.set_ylim(-plt_rng, plt_rng)
+    ax.set_zlim(-2, plt_rng)
     ax.set_title('3D Sim')
     ax.set_xlabel('x')
     ax.set_ylabel('y')
@@ -94,15 +101,36 @@ if __name__ == "__main__":
     R_cfov2_y = rot3dxp(-theta_fov / 2)
 
     # Rotate animation lines back out to common inertial frame for plotting
-    loptax = R_ib.transpose() @ R_bg.transpose() @ lfov + x
-    lfov1 = R_ib.transpose() @ R_bg.transpose() @ R_gc.transpose() @ R_cfov1_y.transpose() @ R_cfov1_x.transpose() @ lfov + x
-    lfov2 = R_ib.transpose() @ R_bg.transpose() @ R_gc.transpose() @ R_cfov2_y.transpose() @ R_cfov1_x.transpose() @ lfov + x
-    lfov3 = R_ib.transpose() @ R_bg.transpose() @ R_gc.transpose() @ R_cfov1_y.transpose() @ R_cfov2_x.transpose() @ lfov + x
-    lfov4 = R_ib.transpose() @ R_bg.transpose() @ R_gc.transpose() @ R_cfov2_y.transpose() @ R_cfov2_x.transpose() @ lfov + x
     lquiv = R_ib.transpose() @ lquiv + x
     lcamx = R_ib.transpose() @ R_bg.transpose() @ R_gc.transpose() @ lcamx + x
     lbNorth = Riv.transpose() @ lbNorth + x
-    lbz = R_ib.transpose() @ lfov + x
+
+    L = np.hstack((R_cfov1_y.transpose() @ R_cfov1_x.transpose() @ lfovbase,
+                   R_cfov2_y.transpose() @ R_cfov1_x.transpose() @ lfovbase,
+                   R_cfov2_y.transpose() @ R_cfov2_x.transpose() @ lfovbase,
+                   R_cfov1_y.transpose() @ R_cfov2_x.transpose() @ lfovbase))
+    L_v = R_vb.transpose() @ R_bg.transpose() @ R_gc.transpose() @ L
+    pts = Riv @ (h * L_v @ np.linalg.inv(np.diag((e3.transpose() @ L_v)[0]))) + x
+    lfov1 = np.hstack((x, pts[:, 0].reshape(-1, 1)))
+    lfov2 = np.hstack((x, pts[:, 1].reshape(-1, 1)))
+    lfov3 = np.hstack((x, pts[:, 2].reshape(-1, 1)))
+    lfov4 = np.hstack((x, pts[:, 3].reshape(-1, 1)))
+
+    l_temp = R_vb.transpose() @ R_bg.transpose() @ R_gc.transpose() @ lfovbase
+    pts_temp = Riv @ (h * l_temp @ np.linalg.inv(np.diag((e3.transpose() @ l_temp)[0]))) + x
+    loptax = np.hstack((x, pts_temp.reshape(-1, 1)))
+
+    l_temp = R_vb.transpose() @ lfovbase
+    pts_temp = Riv @ (h * l_temp @ np.linalg.inv(np.diag((e3.transpose() @ l_temp)[0]))) + x
+    lbz = np.hstack((x, pts_temp.reshape(-1, 1)))
+
+    # # simple rotation FOV lines
+    # loptax = R_ib.transpose() @ R_bg.transpose() @ lfov + x
+    # lfov1 = R_ib.transpose() @ R_bg.transpose() @ R_gc.transpose() @ R_cfov1_y.transpose() @ R_cfov1_x.transpose() @ lfov + x
+    # lfov2 = R_ib.transpose() @ R_bg.transpose() @ R_gc.transpose() @ R_cfov2_y.transpose() @ R_cfov1_x.transpose() @ lfov + x
+    # lfov3 = R_ib.transpose() @ R_bg.transpose() @ R_gc.transpose() @ R_cfov1_y.transpose() @ R_cfov2_x.transpose() @ lfov + x
+    # lfov4 = R_ib.transpose() @ R_bg.transpose() @ R_gc.transpose() @ R_cfov2_y.transpose() @ R_cfov2_x.transpose() @ lfov + x
+    # lbz = R_ib.transpose() @ lfov + x
 
     ploptax = ax.plot3D(loptax[0, :], loptax[1, :], loptax[2, :], 'r--')
     plfov1 = ax.plot3D(lfov1[0, :], lfov1[1, :], lfov1[2, :], 'r-')
@@ -112,6 +140,10 @@ if __name__ == "__main__":
     plcamx = ax.plot3D(lcamx[0, :], lcamx[1, :], lcamx[2, :], 'r-')
     plbNorth = ax.plot3D(lbNorth[0, :], lbNorth[1, :], lbNorth[2, :], 'g-')
     plbz = ax.plot3D(lbz[0, :], lbz[1, :], lbz[2, :], 'k-')
+
+    plpts = np.hstack((pts, pts[:, 0].reshape(-1, 1)))
+    pfov = ax.plot3D(plpts[0, :], plpts[1, :], plpts[2, :], 'c-')
+
     ax.quiver3D(lquiv[0, 0], lquiv[1, 0], lquiv[2, 0], lquiv[0, 1] - lquiv[0, 0], lquiv[1, 1] - lquiv[1, 0], lquiv[2, 1] - lquiv[2, 0], 'b', LineWidth=5)
 
     plt.show()
