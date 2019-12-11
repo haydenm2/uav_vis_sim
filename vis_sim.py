@@ -104,6 +104,9 @@ class UAV_simulator:
 
         self.UpdatePlot()
 
+        # L_test = np.hstack(((self.R_cfov1_y.transpose() @ self.R_cfov2_x.transpose() @ self.e3)/(self.e3.transpose() @ self.R_cfov1_y.transpose() @ self.R_cfov2_x.transpose() @ self.e3),
+        #                          (self.R_cfov2_y.transpose() @ self.R_cfov1_x.transpose() @ self.e3)/(self.e3.transpose() @ self.R_cfov2_y.transpose() @ self.R_cfov1_x.transpose() @ self.e3)))
+
     def UpdateX(self, x):
         self.x = x.reshape(-1, 1)
 
@@ -174,3 +177,16 @@ class UAV_simulator:
 
         self.ax.autoscale_view()
         plt.pause(0.01)
+
+        self.CheckInFOV()
+
+    def CheckInFOV(self):
+        L_test = (self.R_cfov2_y.transpose() @ self.R_cfov1_x.transpose() @ self.e3) / (
+                self.e3.transpose() @ self.R_cfov2_y.transpose() @ self.R_cfov1_x.transpose() @ self.e3)
+        R_ic = self.R_gc @ self.R_bg @ self.R_vb @ self.R_iv
+        p_i = (R_ic @ (self.xt - self.x)) / (self.e3.transpose() @ R_ic @ (self.xt - self.x))
+        test = L_test - np.abs(p_i)
+        if np.any(test < 0):
+            print("TARGET OUT OF SIGHT!")
+        else:
+            print("Target in line of sight...")
