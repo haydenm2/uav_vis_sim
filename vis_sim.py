@@ -23,11 +23,7 @@ class UAV_simulator:
         self.rpy = np.array([np.deg2rad(0), np.deg2rad(0), np.deg2rad(0)])   # UAV attitude (roll, pitch, yaw)
         self.ypr_g = np.array([np.deg2rad(0), np.deg2rad(0), np.deg2rad(0)])   # gimbal attitude (roll, pitch, yaw)
         self.h_fov = h_fov     # horizontal field of view
-        # phir = self.h_fov / 2 - self.ypr_g[0] + np.arctan2(np.sign(self.x[0]) * r, self.x[2])  # right critical constraint
-        # phil = -self.h_fov / 2 - self.ypr_g[0] + np.arctan2(np.sign(self.x[0]) * r, self.x[2])  # left critical constraint
         self.v_fov = v_fov     # vertical field of view
-        # thetab = self.v_fov / 2 - self.ypr_g[1]  # back critical constraint
-        # thetaf = -self.v_fov / 2 - self.ypr_g[1]  # front critical constraint
 
         # General
         self.uav_length = 7
@@ -104,9 +100,6 @@ class UAV_simulator:
 
         self.UpdatePlot()
 
-        # L_test = np.hstack(((self.R_cfov1_y.transpose() @ self.R_cfov2_x.transpose() @ self.e3)/(self.e3.transpose() @ self.R_cfov1_y.transpose() @ self.R_cfov2_x.transpose() @ self.e3),
-        #                          (self.R_cfov2_y.transpose() @ self.R_cfov1_x.transpose() @ self.e3)/(self.e3.transpose() @ self.R_cfov2_y.transpose() @ self.R_cfov1_x.transpose() @ self.e3)))
-
     def UpdateX(self, x):
         self.x = x.reshape(-1, 1)
 
@@ -115,21 +108,21 @@ class UAV_simulator:
 
     def UpdateRPY(self, rpy):
         self.rpy = rpy
-        self.R_vb = rot3dzp(self.rpy[2]) @ rot3dyp(self.rpy[1]) @ rot3dxp(self.rpy[0])  # rotation matrix from vehicle to body frame
+        self.R_vb = rot3dzp(self.rpy[2]) @ rot3dyp(self.rpy[1]) @ rot3dxp(self.rpy[0])
 
     def UpdateGimbalYPR(self, ypr_g):
         self.ypr_g = ypr_g
-        self.R_bg = rot3dzp(self.ypr_g[0]) @ rot3dyp(self.ypr_g[1]) @ rot3dxp(self.ypr_g[2])      # rotation matrix from body to gimbal frame
+        self.R_bg = rot3dzp(self.ypr_g[0]) @ rot3dyp(self.ypr_g[1]) @ rot3dxp(self.ypr_g[2])
 
     def UpdateHFOV(self, h_fov):
         self.h_fov = h_fov
-        self.R_cfov1_x = rot3dyp(self.h_fov / 2)  # rotation matrix from camera to max x field of view frame
-        self.R_cfov2_x = rot3dyp(-self.h_fov / 2)  # rotation matrix from camera to min x field of view frame
+        self.R_cfov1_x = rot3dyp(self.h_fov / 2)
+        self.R_cfov2_x = rot3dyp(-self.h_fov / 2)
 
     def UpdateVFOV(self, v_fov):
         self.v_fov = v_fov
-        self.R_cfov1_y = rot3dxp(self.v_fov / 2)  # rotation matrix from camera to max y field of view frame
-        self.R_cfov2_y = rot3dxp(-self.v_fov / 2)  # rotation matrix from camera to min y field of view frame
+        self.R_cfov1_y = rot3dxp(self.v_fov / 2)
+        self.R_cfov2_y = rot3dxp(-self.v_fov / 2)
 
     def UpdatePlot(self):
         # Rotate animation lines and points back out to common inertial frame for plotting
@@ -152,11 +145,11 @@ class UAV_simulator:
         lfov4 = np.hstack((self.x, pts[:, 3].reshape(-1, 1)))  # field of view corner line 4
 
         l_temp = self.R_vb.transpose() @ self.R_bg.transpose() @ self.R_gc.transpose() @ self.e3
-        pts_temp = self.R_iv @ (self.x[2] * l_temp @ np.linalg.inv(np.diag((self.e3.transpose() @ l_temp)[0]))) + self.x
+        pts_temp = self.R_iv @ (self.x[2] * l_temp @ np.linalg.inv(np.diag((self.e3.transpose() @ l_temp)[0]))) + self.x  # optical axis line points on observation plane
         loptax = np.hstack((self.x, pts_temp.reshape(-1, 1)))  # optical axis line
 
         l_temp = self.R_vb.transpose() @ self.e3
-        pts_temp = self.R_iv @ (self.x[2] * l_temp @ np.linalg.inv(np.diag((self.e3.transpose() @ l_temp)[0]))) + self.x
+        pts_temp = self.R_iv @ (self.x[2] * l_temp @ np.linalg.inv(np.diag((self.e3.transpose() @ l_temp)[0]))) + self.x  # body z-axis line points on observation plane
         lbz = np.hstack((self.x, pts_temp.reshape(-1, 1)))  # z-axis body frame line
 
         # Plotting handles
