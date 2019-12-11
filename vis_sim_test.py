@@ -21,7 +21,7 @@ if __name__ == "__main__":
         sim.UpdatePlot()
 
     # example of cycling through gimbal orientations
-    for i in range(0, -10, -1):
+    for i in range(0, 30, 1):
         sim.UpdateGimbalYPR(np.array((np.deg2rad(i), np.deg2rad(0), np.deg2rad(0))))
         sim.UpdatePlot()
     for j in range(0, -10, -1):

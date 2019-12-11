@@ -159,7 +159,7 @@ class UAV_simulator:
         # Plotting handles
         self.plos[0].set_data_3d(llos[0, :], llos[1, :], llos[2, :])  # plot line of sight vector
         self.pose_point[0].set_data_3d(self.x[0], self.x[1], self.x[2])  # plot point at UAV pose
-        self.pose_line[0].set_data_3d([np.asscalar(self.x[0]), np.asscalar(self.x[0])], [np.asscalar(self.x[1]), np.asscalar(self.x[1])], [np.asscalar(self.x[2]), 0])  # plot UAV pose line perpendicular to observation plane
+        self.pose_line[0].set_data_3d([self.x[0].item(), self.x[0].item()], [self.x[1].item(), self.x[1].item()], [self.x[2].item(), 0])  # plot UAV pose line perpendicular to observation plane
         self.pose_target[0].set_data_3d(self.xt[0], self.xt[1], self.xt[2])  # plot point at target pose
         self.ploptax[0].set_data_3d(loptax[0, :], loptax[1, :], loptax[2, :])  # plot optical axis line
         self.plfov1[0].set_data_3d(lfov1[0, :], lfov1[1, :], lfov1[2, :])  # plot field of view line 1
