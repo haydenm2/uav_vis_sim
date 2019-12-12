@@ -33,9 +33,11 @@ class UAV_simulator:
         self.e3 = np.array([[0], [0], [1]])  # basis vector 3
         plt_range = 100
 
-        # Setup plotting base
-        fig = plt.figure(1)
-        self.ax = plt.axes(projection='3d')     # plot axis handle
+        # ----------------------- Initialize 3D Simulation Plot -----------------------
+
+        # Setup plotting base for 3D sim
+        fig = plt.figure(1, figsize=plt.figaspect(2.))
+        self.ax = fig.add_subplot(2, 1, 1, projection='3d')    # plot axis handle
         self.ax.set_xlim(-plt_range, plt_range)      # plotting x limit
         self.ax.set_ylim(-plt_range, plt_range)      # plotting y limit
         self.ax.set_zlim(-2, plt_range)      # plotting z limit
@@ -54,6 +56,7 @@ class UAV_simulator:
         self.R_cfov2_x = rot3dyp(-self.h_fov / 2)      # rotation matrix from camera to min x field of view frame
         self.R_cfov1_y = rot3dxp(self.v_fov / 2)      # rotation matrix from camera to max y field of view frame
         self.R_cfov2_y = rot3dxp(-self.v_fov / 2)      # rotation matrix from camera to min y field of view frame
+        self.R_ic = self.R_gc @ self.R_bg @ self.R_vb @ self.R_iv
 
         # Rotate animation lines and points back out to common inertial frame for plotting
         llos = np.hstack([self.x, self.xt])     # line of sight vector
@@ -98,7 +101,25 @@ class UAV_simulator:
         self.pfov = self.ax.plot3D(plpts[0, :], plpts[1, :], plpts[2, :], 'c-')       # plot field of view polygon projection on observation plane
         self.quiv = self.ax.plot3D(lquiv[0, :], lquiv[1, :], lquiv[2, :], 'b-', LineWidth=5)       # plot UAV arrow
 
-        self.UpdatePlot()
+        # ----------------------- Initialize Camera View Plot -----------------------
+
+        self.cam_lims = (self.R_cfov2_y.transpose() @ self.R_cfov1_x.transpose() @ self.e3) / (self.e3.transpose() @ self.R_cfov2_y.transpose() @ self.R_cfov1_x.transpose() @ self.e3)
+
+        # Setup plotting base for camera FOV
+        # fig = plt.figure(2)
+        self.axc = fig.add_subplot(2, 1, 2)  # plot axis handle
+        self.axc.set_xlim(-self.cam_lims[1], self.cam_lims[1])  # camera frame y limit
+        self.axc.set_ylim(-self.cam_lims[0], self.cam_lims[0])  # camera frame x limit
+        self.axc.set_title('Camera Field of View')
+        self.axc.set_xlabel('y')  # plotting x axis label (camera x axis)
+        self.axc.set_ylabel('x')  # plotting y axis label (camera y axis)
+        self.axc.grid(True)  # plotting show grid lines
+        self.axc.set_aspect(1)
+
+        p_i = (self.R_ic @ (self.xt - self.x)) / (self.e3.transpose() @ self.R_ic @ (self.xt - self.x))  # target point on normalized image plane
+        self.camera_target_pose = self.axc.plot(p_i[0], p_i[1], 'ro', MarkerFaceColor='r')  # plot point at target pose on camera normalized image plane
+
+        self.UpdatePlots()
 
     def UpdateX(self, x):
         self.x = x.reshape(-1, 1)
@@ -124,7 +145,9 @@ class UAV_simulator:
         self.R_cfov1_y = rot3dxp(self.v_fov / 2)
         self.R_cfov2_y = rot3dxp(-self.v_fov / 2)
 
-    def UpdatePlot(self):
+    def UpdatePlots(self):
+        # ----------------------- 3D Simulation Update -----------------------
+
         # Rotate animation lines and points back out to common inertial frame for plotting
         llos = np.hstack([self.x, self.xt])  # line of sight vector
         lx = np.hstack((np.zeros((3, 1)), self.e1))*self.x_line_scale
@@ -169,16 +192,27 @@ class UAV_simulator:
         self.quiv[0].set_data_3d(lquiv[0, :], lquiv[1, :], lquiv[2, :])  # plot UAV arrow
 
         self.ax.autoscale_view()
+
+        # ----------------------- Camera View Update -----------------------
+        self.R_ic = self.R_gc @ self.R_bg @ self.R_vb @ self.R_iv
+        p_i = (self.R_ic @ (self.xt - self.x)) / (self.e3.transpose() @ self.R_ic @ (self.xt - self.x))  # target point on normalized image plane
+        self.camera_target_pose[0].set_xdata(p_i[1])
+        self.camera_target_pose[0].set_ydata(p_i[0])  # update target point on camera normalized image plane
+
+        self.cam_lims = (self.R_cfov2_y.transpose() @ self.R_cfov1_x.transpose() @ self.e3) / (
+                    self.e3.transpose() @ self.R_cfov2_y.transpose() @ self.R_cfov1_x.transpose() @ self.e3)
+
+        self.axc.set_xlim(-self.cam_lims[1], self.cam_lims[1])  # camera frame y limit
+        self.axc.set_ylim(-self.cam_lims[0], self.cam_lims[0])  # camera frame x limit
+        self.axc.set_aspect(1)
+
         plt.pause(0.01)
 
         self.CheckInFOV()
 
     def CheckInFOV(self):
-        L_test = (self.R_cfov2_y.transpose() @ self.R_cfov1_x.transpose() @ self.e3) / (
-                self.e3.transpose() @ self.R_cfov2_y.transpose() @ self.R_cfov1_x.transpose() @ self.e3)
-        R_ic = self.R_gc @ self.R_bg @ self.R_vb @ self.R_iv
-        p_i = (R_ic @ (self.xt - self.x)) / (self.e3.transpose() @ R_ic @ (self.xt - self.x))
-        test = L_test - np.abs(p_i)
+        p_i = (self.R_ic @ (self.xt - self.x)) / (self.e3.transpose() @ self.R_ic @ (self.xt - self.x))  # target point on normalized image plane
+        test = self.cam_lims - np.abs(p_i)  # test if target point magnitude is smaller than limits
         if np.any(test < 0):
             print("TARGET OUT OF SIGHT!")
         else:
