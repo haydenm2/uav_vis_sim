@@ -32,6 +32,7 @@ class UAV_simulator:
         self.e2 = np.array([[0], [1], [0]])  # basis vector 2
         self.e3 = np.array([[0], [0], [1]])  # basis vector 3
         plt_range = 100
+        self.in_sight = False
 
         # ----------------------- Initialize 3D Simulation Plot -----------------------
 
@@ -214,6 +215,8 @@ class UAV_simulator:
         p_i = (self.R_ic @ (self.xt - self.x)) / (self.e3.transpose() @ self.R_ic @ (self.xt - self.x))  # target point on normalized image plane
         test = self.cam_lims - np.abs(p_i)  # test if target point magnitude is smaller than limits
         if np.any(test < 0):
-            print("TARGET OUT OF SIGHT!")
+            self.in_sight = False
+            self.axc.set_xlabel('y \n Target in sight: False')
         else:
-            print("Target in line of sight...")
+            self.in_sight = True
+            self.axc.set_xlabel('y \n Target in sight: True')
