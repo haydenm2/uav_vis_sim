@@ -217,7 +217,6 @@ class UAV_simulator:
         if np.any(test < 0):
             self.in_sight = False
             self.axc.set_xlabel('y \n Target in sight: False', color="red", fontweight='bold')
-            self.axc.set
         else:
             self.in_sight = True
             self.axc.set_xlabel('y \n Target in sight: True', color="green", fontweight='bold')
