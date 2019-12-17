@@ -20,14 +20,25 @@ if __name__ == "__main__":
         sim.UpdateRPY(np.array((np.deg2rad(i), np.deg2rad(j), np.deg2rad(k))))
         sim.UpdatePlots()
 
+    # # example of cycling through gimbal orientations
+    # for i in range(0, 30, 1):
+    #     sim.UpdateGimbalYPR(np.array((np.deg2rad(i), np.deg2rad(0), np.deg2rad(0))))
+    #     sim.UpdatePlots()
+    # for j in range(0, -10, -1):
+    #     sim.UpdateGimbalYPR(np.array((np.deg2rad(i), np.deg2rad(j), np.deg2rad(0))))
+    #     sim.UpdatePlots()
+    # for k in range(0, -10, -1):
+    #     sim.UpdateGimbalYPR(np.array((np.deg2rad(i), np.deg2rad(j), np.deg2rad(k))))
+    #     sim.UpdatePlots()
+
     # example of cycling through gimbal orientations
-    for i in range(0, 30, 1):
+    for i in range(0, -20, -1):
         sim.UpdateGimbalYPR(np.array((np.deg2rad(i), np.deg2rad(0), np.deg2rad(0))))
         sim.UpdatePlots()
-    for j in range(0, -10, -1):
+    for j in range(0, -20, -1):
         sim.UpdateGimbalYPR(np.array((np.deg2rad(i), np.deg2rad(j), np.deg2rad(0))))
         sim.UpdatePlots()
-    for k in range(0, -10, -1):
+    for k in range(0, -20, -1):
         sim.UpdateGimbalYPR(np.array((np.deg2rad(i), np.deg2rad(j), np.deg2rad(k))))
         sim.UpdatePlots()
 

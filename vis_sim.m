@@ -10,11 +10,8 @@ close all
 r = 10;
 h = 40;
 x = [-r; 0; h];
-rpy = [20,0,0];
-rpyg = [20,0,0];
-xy = [x(1); x(2)];
-xz = [x(1); x(3)];
-yz = [x(2); x(3)];
+rpy = [20,10,10];
+rpyg = [-20,-10,-10];
 xt = [0; 0; 0];
 
 phi_fov = deg2rad(45);
@@ -92,7 +89,7 @@ if plot3ddata
            0, 0, -1];
     R_ib = rot3dzp(psi)*rot3dyp(theta)*rot3dxp(phi)*Riv;
     R_vb = rot3dzp(psi)*rot3dyp(theta)*rot3dxp(phi);
-    R_bg = rot3dzp(psi_g)*rot3dyp(theta_g)*rot3dxp(phi_g);
+    R_bg = rot3dxp(phi_g)*rot3dyp(theta_g)*rot3dzp(psi_g);
     R_gc = eye(3);
     R_cfov1_x = rot3dyp(phi_fov/2);
     R_cfov2_x = rot3dyp(-phi_fov/2);
@@ -318,7 +315,14 @@ if plot2ddata
     hold off
 end
 
+a = rot3dxp(1)
+b = rot3dyp(1)
+c = rot3dzp(1)
 
+A = rot3dxp(-1)
+B = rot3dyp(-1)
+C = rot3dzp(-1)
+tes = 1
 
 function R = rot2da(ang)
     R = [cos(ang), -sin(ang);

@@ -27,7 +27,7 @@ class UAV_simulator:
 
         # General
         self.uav_length = 7
-        self.x_line_scale = 10
+        self.x_line_scale = 15
         self.e1 = np.array([[1], [0], [0]])  # basis vector 1
         self.e2 = np.array([[0], [1], [0]])  # basis vector 2
         self.e3 = np.array([[0], [0], [1]])  # basis vector 3
@@ -51,7 +51,7 @@ class UAV_simulator:
         # Define initial rotation matrices
         self.R_iv = np.array([[0, 1, 0], [1, 0, 0], [0, 0, -1]])      # rotation matrix from inertial to vehicle frame
         self.R_vb = rot3dzp(self.rpy[2]) @ rot3dyp(self.rpy[1]) @ rot3dxp(self.rpy[0])      # rotation matrix from vehicle to body frame
-        self.R_bg = rot3dzp(self.ypr_g[0]) @ rot3dyp(self.ypr_g[1]) @ rot3dxp(self.ypr_g[2])      # rotation matrix from body to gimbal frame
+        self.R_bg = rot3dxp(self.ypr_g[2]) @ rot3dyp(self.ypr_g[1]) @ rot3dzp(self.ypr_g[0])      # rotation matrix from body to gimbal frame
         self.R_gc = np.eye(3)      # rotation matrix from gimbal to camera frame
         self.R_cfov1_x = rot3dyp(self.h_fov / 2)      # rotation matrix from camera to max x field of view frame
         self.R_cfov2_x = rot3dyp(-self.h_fov / 2)      # rotation matrix from camera to min x field of view frame
@@ -104,10 +104,9 @@ class UAV_simulator:
 
         # ----------------------- Initialize Camera View Plot -----------------------
 
-        self.cam_lims = (self.R_cfov2_y.transpose() @ self.R_cfov1_x.transpose() @ self.e3) / (self.e3.transpose() @ self.R_cfov2_y.transpose() @ self.R_cfov1_x.transpose() @ self.e3)
+        self.cam_lims = (self.R_cfov1_y @ self.R_cfov2_x @ self.e3) / (self.e3.transpose() @ self.R_cfov1_y @ self.R_cfov2_x @ self.e3)
 
         # Setup plotting base for camera FOV
-        # fig = plt.figure(2)
         self.axc = fig.add_subplot(2, 1, 2)  # plot axis handle
         self.axc.set_xlim(-self.cam_lims[1], self.cam_lims[1])  # camera frame y limit
         self.axc.set_ylim(-self.cam_lims[0], self.cam_lims[0])  # camera frame x limit
@@ -134,7 +133,7 @@ class UAV_simulator:
 
     def UpdateGimbalYPR(self, ypr_g):
         self.ypr_g = ypr_g
-        self.R_bg = rot3dzp(self.ypr_g[0]) @ rot3dyp(self.ypr_g[1]) @ rot3dxp(self.ypr_g[2])
+        self.R_bg = rot3dxp(self.ypr_g[2]) @ rot3dyp(self.ypr_g[1]) @ rot3dzp(self.ypr_g[0])
 
     def UpdateHFOV(self, h_fov):
         self.h_fov = h_fov
