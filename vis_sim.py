@@ -20,8 +20,8 @@ class UAV_simulator:
         # UAV and target conditions
         self.x = x0     # UAV state
         self.xt = np.array([[0], [0], [0]])     # target state
-        self.rpy = np.array([np.deg2rad(0), np.deg2rad(0), np.deg2rad(0)])   # UAV attitude (roll, pitch, yaw)
-        self.ypr_g = np.array([np.deg2rad(0), np.deg2rad(0), np.deg2rad(0)])   # gimbal attitude (roll, pitch, yaw)
+        self.rpy = np.array([np.deg2rad(5), np.deg2rad(5), np.deg2rad(5)])   # UAV attitude (roll, pitch, yaw)
+        self.ypr_g = np.array([np.deg2rad(5), np.deg2rad(5), np.deg2rad(5)+-0.824157594297195])   # gimbal attitude (roll, pitch, yaw)
         self.h_fov = h_fov     # horizontal field of view
         self.v_fov = v_fov     # vertical field of view
 
@@ -116,10 +116,21 @@ class UAV_simulator:
         self.axc.grid(True)  # plotting show grid lines
         self.axc.set_aspect(1)
 
-        p_i = (self.R_ic @ (self.xt - self.x)) / (self.e3.transpose() @ self.R_ic @ (self.xt - self.x))  # target point on normalized image plane
-        self.camera_target_pose = self.axc.plot(p_i[0], p_i[1], 'ro', MarkerFaceColor='r')  # plot point at target pose on camera normalized image plane
+        self.p_i = (self.R_ic @ (self.xt - self.x)) / (self.e3.transpose() @ self.R_ic @ (self.xt - self.x))  # target point on normalized image plane
+        self.camera_target_pose = self.axc.plot(self.p_i[0], self.p_i[1], 'ro', MarkerFaceColor='r')  # plot point at target pose on camera normalized image plane
 
         self.UpdatePlots()
+
+        # -------------TESTING ------------------
+        v_r = self.R_gc @ self.R_bg @ self.e1
+        v_p = self.R_gc @ self.R_bg @ self.e2
+        v_y = self.R_gc @ self.R_bg @ self.e3
+        v_gy = self.R_gc @ self.e3
+        v_gp = self.R_gc @ self.e2
+        v_gr = self.R_gc @ self.e1
+        [ang1, ang2, ang3, ang4] = self.CalculateCriticalAngles(v_gr)
+
+        test = 1
 
     def UpdateX(self, x):
         self.x = x.reshape(-1, 1)
@@ -195,9 +206,9 @@ class UAV_simulator:
 
         # ----------------------- Camera View Update -----------------------
         self.R_ic = self.R_gc @ self.R_bg @ self.R_vb @ self.R_iv
-        p_i = (self.R_ic @ (self.xt - self.x)) / (self.e3.transpose() @ self.R_ic @ (self.xt - self.x))  # target point on normalized image plane
-        self.camera_target_pose[0].set_xdata(p_i[1])
-        self.camera_target_pose[0].set_ydata(p_i[0])  # update target point on camera normalized image plane
+        self.p_i = (self.R_ic @ (self.xt - self.x)) / (self.e3.transpose() @ self.R_ic @ (self.xt - self.x))  # target point on normalized image plane
+        self.camera_target_pose[0].set_xdata(self.p_i[1])
+        self.camera_target_pose[0].set_ydata(self.p_i[0])  # update target point on camera normalized image plane
 
         self.cam_lims = (self.R_cfov2_y.transpose() @ self.R_cfov1_x.transpose() @ self.e3) / (
                     self.e3.transpose() @ self.R_cfov2_y.transpose() @ self.R_cfov1_x.transpose() @ self.e3)
@@ -211,11 +222,39 @@ class UAV_simulator:
         self.CheckInFOV()
 
     def CheckInFOV(self):
-        p_i = (self.R_ic @ (self.xt - self.x)) / (self.e3.transpose() @ self.R_ic @ (self.xt - self.x))  # target point on normalized image plane
-        test = self.cam_lims - np.abs(p_i)  # test if target point magnitude is smaller than limits
+        self.p_i = (self.R_ic @ (self.xt - self.x)) / (self.e3.transpose() @ self.R_ic @ (self.xt - self.x))  # target point on normalized image plane
+        test = self.cam_lims - np.abs(self.p_i)  # test if target point magnitude is smaller than limits
         if np.any(test < 0):
             self.in_sight = False
             self.axc.set_xlabel('y \n Target in sight: False', color="red", fontweight='bold')
         else:
             self.in_sight = True
             self.axc.set_xlabel('y \n Target in sight: True', color="green", fontweight='bold')
+
+    def CalculateCriticalAngles(self, v):
+        ax1 = np.tensordot(self.p_i - np.tensordot(v, self.p_i) * v, self.e1) - np.tensordot(self.cam_lims[0]*(self.p_i - np.tensordot(v, self.p_i) * v), self.e3)
+        ax2 = np.tensordot(self.p_i - np.tensordot(v, self.p_i) * v, self.e1) - np.tensordot(-self.cam_lims[0]*(self.p_i - np.tensordot(v, self.p_i) * v), self.e3)
+        ay1 = np.tensordot(self.p_i - np.tensordot(v, self.p_i) * v, self.e2) - np.tensordot(self.cam_lims[1]*(self.p_i - np.tensordot(v, self.p_i) * v), self.e3)
+        ay2 = np.tensordot(self.p_i - np.tensordot(v, self.p_i) * v, self.e2) - np.tensordot(-self.cam_lims[1]*(self.p_i - np.tensordot(v, self.p_i) * v), self.e3)
+
+        bx1 = np.tensordot(np.cross(v, self.p_i, axis=0), self.e1) - np.tensordot(self.cam_lims[0]*np.cross(v, self.p_i, axis=0), self.e3)
+        bx2 = np.tensordot(np.cross(v, self.p_i, axis=0), self.e1) - np.tensordot(-self.cam_lims[0]*np.cross(v, self.p_i, axis=0), self.e3)
+        by1 = np.tensordot(np.cross(v, self.p_i, axis=0), self.e2) - np.tensordot(self.cam_lims[1]*np.cross(v, self.p_i, axis=0), self.e3)
+        by2 = np.tensordot(np.cross(v, self.p_i, axis=0), self.e2) - np.tensordot(-self.cam_lims[1]*np.cross(v, self.p_i, axis=0), self.e3)
+
+        cx1 = np.tensordot(np.tensordot(v, self.p_i) * v, self.e1) - np.tensordot(self.cam_lims[0]*np.tensordot(v, self.p_i) * v, self.e3)
+        cx2 = np.tensordot(np.tensordot(v, self.p_i) * v, self.e1) - np.tensordot(-self.cam_lims[0]*np.tensordot(v, self.p_i) * v, self.e3)
+        cy1 = np.tensordot(np.tensordot(v, self.p_i) * v, self.e2) - np.tensordot(self.cam_lims[1]*np.tensordot(v, self.p_i) * v, self.e3)
+        cy2 = np.tensordot(np.tensordot(v, self.p_i) * v, self.e2) - np.tensordot(-self.cam_lims[1]*np.tensordot(v, self.p_i) * v, self.e3)
+
+        angx1 = np.arcsin(-cx1/np.sqrt(ax1**2 + bx1**2)) - np.arcsin(ax1/np.sqrt(ax1**2 + bx1**2))
+        angx2 = np.arcsin(-cx2/np.sqrt(ax2**2 + bx2**2)) - np.arcsin(ax2/np.sqrt(ax2**2 + bx2**2))
+        angy1 = np.arcsin(-cy1/np.sqrt(ay1**2 + by1**2)) - np.arcsin(ay1/np.sqrt(ay1**2 + by1**2))
+        angy2 = np.arcsin(-cy2/np.sqrt(ay2**2 + by2**2)) - np.arcsin(ay2/np.sqrt(ay2**2 + by2**2))
+
+        ang1 = angy1
+        ang2 = angy2
+        ang3 = angx1
+        ang4 = angx2
+
+        return [ang1, ang2, ang3, ang4]
