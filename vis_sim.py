@@ -21,7 +21,7 @@ class UAV_simulator:
         self.x = x0     # UAV state
         self.xt = np.array([[0], [0], [0]])     # target state
         self.rpy = np.array([np.deg2rad(5), np.deg2rad(5), np.deg2rad(5)])   # UAV attitude (roll, pitch, yaw)
-        self.ypr_g = np.array([np.deg2rad(5), np.deg2rad(5), np.deg2rad(5)+-0.824157594297195])   # gimbal attitude (roll, pitch, yaw)
+        self.ypr_g = np.array([np.deg2rad(5), np.deg2rad(5), np.deg2rad(5)])   # gimbal attitude (roll, pitch, yaw)
         self.h_fov = h_fov     # horizontal field of view
         self.v_fov = v_fov     # vertical field of view
 
