@@ -15,19 +15,21 @@ def rot3dzp(ang):
     return R
 
 class UAV_simulator:
-    def __init__(self, x0=np.array([[-10], [0], [40]]), h_fov=np.deg2rad(45), v_fov=np.deg2rad(45)):
+    def __init__(self, x0=np.array([[10], [10], [40]]), xt0=np.array([[5], [-5], [0]]), h_fov=np.deg2rad(45), v_fov=np.deg2rad(45)):
 
         # UAV and target conditions
         self.x = x0     # UAV state
-        self.xt = np.array([[0], [0], [0]])     # target state
-        self.rpy = np.array([np.deg2rad(5), np.deg2rad(5), np.deg2rad(5)])   # UAV attitude (roll, pitch, yaw)
-        self.ypr_g = np.array([np.deg2rad(5), np.deg2rad(5), np.deg2rad(5)])   # gimbal attitude (roll, pitch, yaw)
+        self.xt = xt0     # target state
+        self.rpy = np.array([np.deg2rad(5), np.deg2rad(-5), np.deg2rad(10)])   # UAV attitude (roll, pitch, yaw)
+        self.ypr_g = np.array([np.deg2rad(9), np.deg2rad(-6), np.deg2rad(7)])   # gimbal attitude (roll, pitch, yaw)
         self.h_fov = h_fov     # horizontal field of view
         self.v_fov = v_fov     # vertical field of view
+        self.R_perturb_b = rot3dzp(0)
+        self.R_perturb_c = rot3dxp(0)
 
         # General
         self.uav_length = 7
-        self.x_line_scale = 15
+        self.x_line_scale = 20
         self.e1 = np.array([[1], [0], [0]])  # basis vector 1
         self.e2 = np.array([[0], [1], [0]])  # basis vector 2
         self.e3 = np.array([[0], [0], [1]])  # basis vector 3
@@ -50,8 +52,8 @@ class UAV_simulator:
 
         # Define initial rotation matrices
         self.R_iv = np.array([[0, 1, 0], [1, 0, 0], [0, 0, -1]])      # rotation matrix from inertial to vehicle frame
-        self.R_vb = rot3dzp(self.rpy[2]) @ rot3dyp(self.rpy[1]) @ rot3dxp(self.rpy[0])      # rotation matrix from vehicle to body frame
-        self.R_bg = rot3dxp(self.ypr_g[2]) @ rot3dyp(self.ypr_g[1]) @ rot3dzp(self.ypr_g[0])      # rotation matrix from body to gimbal frame
+        self.R_vb = self.R_perturb_b @ rot3dzp(self.rpy[2]) @ rot3dyp(self.rpy[1]) @ rot3dxp(self.rpy[0])      # rotation matrix from vehicle to body frame
+        self.R_bg = self.R_perturb_c @ rot3dxp(self.ypr_g[2]) @ rot3dyp(self.ypr_g[1]) @ rot3dzp(self.ypr_g[0])      # rotation matrix from body to gimbal frame
         self.R_gc = np.eye(3)      # rotation matrix from gimbal to camera frame
         self.R_cfov1_x = rot3dyp(self.h_fov / 2)      # rotation matrix from camera to max x field of view frame
         self.R_cfov2_x = rot3dyp(-self.h_fov / 2)      # rotation matrix from camera to min x field of view frame
@@ -125,10 +127,10 @@ class UAV_simulator:
         v_r = self.R_gc @ self.R_bg @ self.e1
         v_p = self.R_gc @ self.R_bg @ self.e2
         v_y = self.R_gc @ self.R_bg @ self.e3
-        v_gy = self.R_gc @ self.e3
-        v_gp = self.R_gc @ self.e2
-        v_gr = self.R_gc @ self.e1
-        [ang1, ang2, ang3, ang4] = self.CalculateCriticalAngles(v_gr)
+        v_yg = self.R_gc @ self.e3
+        v_pg = self.R_gc @ self.e2
+        v_rg = self.R_gc @ self.e1
+        [ang1, ang2, ang3, ang4] = self.CalculateCriticalAngles(v_r)  # right, left, top, bottom
 
         test = 1
 
@@ -140,11 +142,19 @@ class UAV_simulator:
 
     def UpdateRPY(self, rpy):
         self.rpy = rpy
-        self.R_vb = rot3dzp(self.rpy[2]) @ rot3dyp(self.rpy[1]) @ rot3dxp(self.rpy[0])
+        self.R_vb = self.R_perturb_b @ rot3dzp(self.rpy[2]) @ rot3dyp(self.rpy[1]) @ rot3dxp(self.rpy[0])
 
     def UpdateGimbalYPR(self, ypr_g):
         self.ypr_g = ypr_g
-        self.R_bg = rot3dxp(self.ypr_g[2]) @ rot3dyp(self.ypr_g[1]) @ rot3dzp(self.ypr_g[0])
+        self.R_bg = self.R_perturb_c @ rot3dxp(self.ypr_g[2]) @ rot3dyp(self.ypr_g[1]) @ rot3dzp(self.ypr_g[0])
+
+    def UpdatePertRPY(self, rpy):
+        self.R_perturb_b = rot3dzp(rpy[2]) @ rot3dyp(rpy[1]) @ rot3dxp(rpy[0])
+        self.R_vb = self.R_perturb_b @ rot3dzp(self.rpy[2]) @ rot3dyp(self.rpy[1]) @ rot3dxp(self.rpy[0])
+
+    def UpdateGimbalPertYPR(self, ypr_g):
+        self.R_perturb_c = rot3dxp(ypr_g[2]) @ rot3dyp(ypr_g[1]) @ rot3dzp(ypr_g[0])
+        self.R_bg = self.R_perturb_c @ rot3dxp(self.ypr_g[2]) @ rot3dyp(self.ypr_g[1]) @ rot3dzp(self.ypr_g[0])
 
     def UpdateHFOV(self, h_fov):
         self.h_fov = h_fov
@@ -232,6 +242,9 @@ class UAV_simulator:
             self.axc.set_xlabel('y \n Target in sight: True', color="green", fontweight='bold')
 
     def CalculateCriticalAngles(self, v):
+        self.R_ic = self.R_gc @ self.R_bg @ self.R_vb @ self.R_iv
+        self.p_i = (self.R_ic @ (self.xt - self.x)) / (self.e3.transpose() @ self.R_ic @ (self.xt - self.x))  # target point on normalized image plane
+        # solves rodriguez equation for angle given a desired axis and
         ax1 = np.tensordot(self.p_i - np.tensordot(v, self.p_i) * v, self.e1) - np.tensordot(self.cam_lims[0]*(self.p_i - np.tensordot(v, self.p_i) * v), self.e3)
         ax2 = np.tensordot(self.p_i - np.tensordot(v, self.p_i) * v, self.e1) - np.tensordot(-self.cam_lims[0]*(self.p_i - np.tensordot(v, self.p_i) * v), self.e3)
         ay1 = np.tensordot(self.p_i - np.tensordot(v, self.p_i) * v, self.e2) - np.tensordot(self.cam_lims[1]*(self.p_i - np.tensordot(v, self.p_i) * v), self.e3)
@@ -248,9 +261,22 @@ class UAV_simulator:
         cy2 = np.tensordot(np.tensordot(v, self.p_i) * v, self.e2) - np.tensordot(-self.cam_lims[1]*np.tensordot(v, self.p_i) * v, self.e3)
 
         angx1 = np.arcsin(-cx1/np.sqrt(ax1**2 + bx1**2)) - np.arcsin(ax1/np.sqrt(ax1**2 + bx1**2))
+        print(np.arcsin(-cx1/np.sqrt(ax1**2 + bx1**2)), -cx1/np.sqrt(ax1**2 + bx1**2))
+        print(np.arcsin(ax1/np.sqrt(ax1**2 + bx1**2)), ax1/np.sqrt(ax1**2 + bx1**2))
+        print(angx1)
         angx2 = np.arcsin(-cx2/np.sqrt(ax2**2 + bx2**2)) - np.arcsin(ax2/np.sqrt(ax2**2 + bx2**2))
+        print(np.arcsin(-cx2 / np.sqrt(ax2 ** 2 + bx2 ** 2)), -cx2 / np.sqrt(ax2 ** 2 + bx2 ** 2))
+        print(np.arcsin(ax2 / np.sqrt(ax2 ** 2 + bx2 ** 2)), ax2 / np.sqrt(ax2 ** 2 + bx2 ** 2))
+        print(angx2)
         angy1 = np.arcsin(-cy1/np.sqrt(ay1**2 + by1**2)) - np.arcsin(ay1/np.sqrt(ay1**2 + by1**2))
+        print(np.arcsin(-cy1 / np.sqrt(ay1 ** 2 + by1 ** 2)), -cy1 / np.sqrt(ay1 ** 2 + by1 ** 2))
+        print(np.arcsin(ay1 / np.sqrt(ay1 ** 2 + by1 ** 2)), ay1 / np.sqrt(ay1 ** 2 + by1 ** 2))
+        print(angy1)
         angy2 = np.arcsin(-cy2/np.sqrt(ay2**2 + by2**2)) - np.arcsin(ay2/np.sqrt(ay2**2 + by2**2))
+        print(np.arcsin(-cy2 / np.sqrt(ay2 ** 2 + by2 ** 2)), -cy2 / np.sqrt(ay2 ** 2 + by2 ** 2))
+        print(np.arcsin(ay2 / np.sqrt(ay2 ** 2 + by2 ** 2)), ay2 / np.sqrt(ay2 ** 2 + by2 ** 2))
+        print(angy2)
+        print("-----------------------------------------------")
 
         ang1 = angy1
         ang2 = angy2
