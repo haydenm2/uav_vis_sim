@@ -15,13 +15,13 @@ def rot3dzp(ang):
     return R
 
 class UAV_simulator:
-    def __init__(self, x0=np.array([[10], [10], [40]]), xt0=np.array([[5], [-5], [0]]), h_fov=np.deg2rad(45), v_fov=np.deg2rad(45)):
+    def __init__(self, x0=np.array([[10], [10], [40]]), xt0=np.array([[0], [0], [0]]), rpy=np.array([np.deg2rad(0), np.deg2rad(0), np.deg2rad(0)]), ypr_g=np.array([np.deg2rad(0), np.deg2rad(0), np.deg2rad(0)]), h_fov=np.deg2rad(45), v_fov=np.deg2rad(45)):
 
         # UAV and target conditions
         self.x = x0     # UAV state
         self.xt = xt0     # target state
-        self.rpy = np.array([np.deg2rad(5), np.deg2rad(-5), np.deg2rad(10)])   # UAV attitude (roll, pitch, yaw)
-        self.ypr_g = np.array([np.deg2rad(9), np.deg2rad(-6), np.deg2rad(7)])   # gimbal attitude (roll, pitch, yaw)
+        self.rpy = rpy   # UAV attitude (roll, pitch, yaw)
+        self.ypr_g = ypr_g   # gimbal attitude (yaw, pitch, roll)
         self.h_fov = h_fov     # horizontal field of view
         self.v_fov = v_fov     # vertical field of view
         self.R_perturb_b = rot3dzp(0)
@@ -148,6 +148,11 @@ class UAV_simulator:
         self.ypr_g = ypr_g
         self.R_bg = self.R_perturb_c @ rot3dxp(self.ypr_g[2]) @ rot3dyp(self.ypr_g[1]) @ rot3dzp(self.ypr_g[0])
 
+    def UpdatePertR(self, R):
+        self.R_perturb_c = R
+        self.R_vb = rot3dzp(self.rpy[2]) @ rot3dyp(self.rpy[1]) @ rot3dxp(self.rpy[0])
+        self.R_bg = self.R_perturb_c @ rot3dxp(self.ypr_g[2]) @ rot3dyp(self.ypr_g[1]) @ rot3dzp(self.ypr_g[0])
+
     def UpdatePertRPY(self, rpy):
         self.R_perturb_b = rot3dzp(rpy[2]) @ rot3dyp(rpy[1]) @ rot3dxp(rpy[0])
         self.R_vb = self.R_perturb_b @ rot3dzp(self.rpy[2]) @ rot3dyp(self.rpy[1]) @ rot3dxp(self.rpy[0])
@@ -241,10 +246,11 @@ class UAV_simulator:
             self.in_sight = True
             self.axc.set_xlabel('y \n Target in sight: True', color="green", fontweight='bold')
 
-    def CalculateCriticalAngles(self, v):
+    def CalculateCriticalAngles(self, v, check=False):
         self.R_ic = self.R_gc @ self.R_bg @ self.R_vb @ self.R_iv
         self.p_i = (self.R_ic @ (self.xt - self.x)) / (self.e3.transpose() @ self.R_ic @ (self.xt - self.x))  # target point on normalized image plane
-        # solves rodriguez equation for angle given a desired axis and
+
+        # solves rodriguez axis angle rotation equation for angle given a desired axis and point location (i.e. solution to general form a*cos(ang) + b*sin(ang) + c = 0)
         ax1 = np.tensordot(self.p_i - np.tensordot(v, self.p_i) * v, self.e1) - np.tensordot(self.cam_lims[0]*(self.p_i - np.tensordot(v, self.p_i) * v), self.e3)
         ax2 = np.tensordot(self.p_i - np.tensordot(v, self.p_i) * v, self.e1) - np.tensordot(-self.cam_lims[0]*(self.p_i - np.tensordot(v, self.p_i) * v), self.e3)
         ay1 = np.tensordot(self.p_i - np.tensordot(v, self.p_i) * v, self.e2) - np.tensordot(self.cam_lims[1]*(self.p_i - np.tensordot(v, self.p_i) * v), self.e3)
@@ -261,26 +267,56 @@ class UAV_simulator:
         cy2 = np.tensordot(np.tensordot(v, self.p_i) * v, self.e2) - np.tensordot(-self.cam_lims[1]*np.tensordot(v, self.p_i) * v, self.e3)
 
         angx1 = np.arcsin(-cx1/np.sqrt(ax1**2 + bx1**2)) - np.arcsin(ax1/np.sqrt(ax1**2 + bx1**2))
-        print(np.arcsin(-cx1/np.sqrt(ax1**2 + bx1**2)), -cx1/np.sqrt(ax1**2 + bx1**2))
-        print(np.arcsin(ax1/np.sqrt(ax1**2 + bx1**2)), ax1/np.sqrt(ax1**2 + bx1**2))
-        print(angx1)
         angx2 = np.arcsin(-cx2/np.sqrt(ax2**2 + bx2**2)) - np.arcsin(ax2/np.sqrt(ax2**2 + bx2**2))
-        print(np.arcsin(-cx2 / np.sqrt(ax2 ** 2 + bx2 ** 2)), -cx2 / np.sqrt(ax2 ** 2 + bx2 ** 2))
-        print(np.arcsin(ax2 / np.sqrt(ax2 ** 2 + bx2 ** 2)), ax2 / np.sqrt(ax2 ** 2 + bx2 ** 2))
-        print(angx2)
         angy1 = np.arcsin(-cy1/np.sqrt(ay1**2 + by1**2)) - np.arcsin(ay1/np.sqrt(ay1**2 + by1**2))
-        print(np.arcsin(-cy1 / np.sqrt(ay1 ** 2 + by1 ** 2)), -cy1 / np.sqrt(ay1 ** 2 + by1 ** 2))
-        print(np.arcsin(ay1 / np.sqrt(ay1 ** 2 + by1 ** 2)), ay1 / np.sqrt(ay1 ** 2 + by1 ** 2))
-        print(angy1)
         angy2 = np.arcsin(-cy2/np.sqrt(ay2**2 + by2**2)) - np.arcsin(ay2/np.sqrt(ay2**2 + by2**2))
-        print(np.arcsin(-cy2 / np.sqrt(ay2 ** 2 + by2 ** 2)), -cy2 / np.sqrt(ay2 ** 2 + by2 ** 2))
-        print(np.arcsin(ay2 / np.sqrt(ay2 ** 2 + by2 ** 2)), ay2 / np.sqrt(ay2 ** 2 + by2 ** 2))
-        print(angy2)
-        print("-----------------------------------------------")
 
-        ang1 = angy1
-        ang2 = angy2
-        ang3 = angx1
-        ang4 = angx2
+        if check:  # used for returning values of positive angles without assessment of negative angles
+            ang1 = angy1
+            ang2 = angy2
+            ang3 = angx1
+            ang4 = angx2
+        else:  # assess result of positive and negative angles to see which results in a rotation constraint of 0 when applied
+            self.UpdatePertR(self.axis_angle_to_R(v, angy1))
+            cangy1, _, _, _ = self.CalculateCriticalAngles(v, True)  # right edge constraint
+            self.UpdatePertR(self.axis_angle_to_R(v, angy2))
+            _, cangy2, _, _ = self.CalculateCriticalAngles(v, True)  # left edge constraint
+            self.UpdatePertR(self.axis_angle_to_R(v, angx1))
+            _, _, cangx1, _ = self.CalculateCriticalAngles(v, True)  # top edge constraint
+            self.UpdatePertR(self.axis_angle_to_R(v, angx2))
+            _, _, _, cangx2 = self.CalculateCriticalAngles(v, True)  # bottom edge constraint
+            self.UpdatePertR(self.axis_angle_to_R(v, 0))
+
+            if np.abs(cangy1) < 1e-14:
+                ang1 = angy1
+            else:
+                ang1 = -angy1
+
+            if np.abs(cangy2) < 1e-14:
+                ang2 = angy2
+            else:
+                ang2 = -angy2
+
+            if np.abs(cangx1) < 1e-14:
+                ang3 = angx1
+            else:
+                ang3 = -angx1
+
+            if np.abs(cangx2) < 1e-14:
+                ang4 = angx2
+            else:
+                ang4 = -angx2
 
         return [ang1, ang2, ang3, ang4]
+
+    def axis_angle_to_R(self, ax, ang):
+        R = np.array([[np.cos(ang) + ax[0, 0] ** 2 * (1 - np.cos(ang)),
+                       ax[0, 0] * ax[1, 0] * (1 - np.cos(ang)) - ax[2, 0] * np.sin(ang),
+                       ax[0, 0] * ax[2, 0] * (1 - np.cos(ang)) + ax[1, 0] * np.sin(ang)],
+                      [ax[0, 0] * ax[1, 0] * (1 - np.cos(ang)) + ax[2, 0] * np.sin(ang),
+                       np.cos(ang) + ax[1, 0] ** 2 * (1 - np.cos(ang)),
+                       ax[1, 0] * ax[2, 0] * (1 - np.cos(ang)) - ax[0, 0] * np.sin(ang)],
+                      [ax[0, 0] * ax[2, 0] * (1 - np.cos(ang)) - ax[1, 0] * np.sin(ang),
+                       ax[1, 0] * ax[2, 0] * (1 - np.cos(ang)) + ax[0, 0] * np.sin(ang),
+                       np.cos(ang) + ax[2, 0] ** 2 * (1 - np.cos(ang))]])
+        return R.transpose()
