@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 
 
 if __name__ == "__main__":
-    # Init simulator
+    # Initialize simulator
     x0 = np.array([[-10], [0], [100]])
     xt0 = np.array([[0], [0], [0]])
     rpy = np.array([np.deg2rad(0), np.deg2rad(0), np.deg2rad(0)])
@@ -78,8 +78,8 @@ if __name__ == "__main__":
     [ang1, ang2, ang3, ang4] = sim.CalculateCriticalAngles(v_r)  # right, left, top, bottom
     print("UAV Roll Constraints (Left, Right, Up, Down): ", ang1, ang2, ang3, ang4)
 
-    for i in range(0, 360, 4):
-        sim.UpdatePertR(sim.axis_angle_to_R(v_r, np.deg2rad(i)))
+    # for i in range(0, 360, 4):
+    #     sim.UpdatePertR(sim.axis_angle_to_R(v_r, np.deg2rad(i)))
 
     disp_time = 1.0
 

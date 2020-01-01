@@ -16,7 +16,6 @@ def rot3dzp(ang):
 
 class UAV_simulator:
     def __init__(self, x0=np.array([[10], [10], [40]]), xt0=np.array([[0], [0], [0]]), rpy=np.array([np.deg2rad(0), np.deg2rad(0), np.deg2rad(0)]), ypr_g=np.array([np.deg2rad(0), np.deg2rad(0), np.deg2rad(0)]), h_fov=np.deg2rad(45), v_fov=np.deg2rad(45)):
-
         # UAV and target conditions
         self.x = x0     # UAV state
         self.xt = xt0     # target state
@@ -27,7 +26,7 @@ class UAV_simulator:
         self.R_perturb_b = rot3dzp(0)
         self.R_perturb_c = rot3dxp(0)
 
-        # General
+        # General vectors and plotting variables
         self.uav_length = 7
         self.x_line_scale = 20
         self.e1 = np.array([[1], [0], [0]])  # basis vector 1
@@ -118,39 +117,35 @@ class UAV_simulator:
         self.axc.grid(True)  # plotting show grid lines
         self.axc.set_aspect(1)
 
-        self.P_i = self.R_ic @ (self.xt - self.x)
+        self.P_i = self.R_ic @ (self.xt - self.x)  # target line of sight vector in camera frame
         self.p_i = self.P_i / (self.e3.transpose() @ self.P_i)  # target point on normalized image plane
         self.camera_target_pose = self.axc.plot(self.p_i[0], self.p_i[1], 'ro', MarkerFaceColor='r')  # plot point at target pose on camera normalized image plane
 
         self.UpdateSim()
 
-        # -------------TESTING ------------------
-        v_r = self.R_gc @ self.R_bg @ self.e1
-        v_p = self.R_gc @ self.R_bg @ self.e2
-        v_y = self.R_gc @ self.R_bg @ self.e3
-        v_yg = self.R_gc @ self.e3
-        v_pg = self.R_gc @ self.e2
-        v_rg = self.R_gc @ self.e1
-        [ang1, ang2, ang3, ang4] = self.CalculateCriticalAngles(v_r)  # right, left, top, bottom
-
+    # update UAV position
     def UpdateX(self, x):
         self.x = x.reshape(-1, 1)
         self.UpdateSim()
 
+    # update target position
     def UpdateTargetX(self, xt):
         self.xt = xt.reshape(-1, 1)
         self.UpdateSim()
 
+    # update UAV orientation
     def UpdateRPY(self, rpy):
         self.rpy = rpy
         self.R_vb = self.R_perturb_b @ rot3dzp(self.rpy[2]) @ rot3dyp(self.rpy[1]) @ rot3dxp(self.rpy[0])
         self.UpdateSim()
 
+    # update UAV gimbal orientation
     def UpdateGimbalYPR(self, ypr_g):
         self.ypr_g = ypr_g
         self.R_bg = self.R_perturb_c @ rot3dxp(self.ypr_g[2]) @ rot3dyp(self.ypr_g[1]) @ rot3dzp(self.ypr_g[0])
         self.UpdateSim()
 
+    # applies general perturbation to UAV camera view orientation
     def UpdatePertR(self, R, silent=False):
         self.R_perturb_c = R
         self.R_vb = rot3dzp(self.rpy[2]) @ rot3dyp(self.rpy[1]) @ rot3dxp(self.rpy[0])
@@ -160,28 +155,21 @@ class UAV_simulator:
         else:
             self.UpdateSim()
 
-    def UpdatePertRPY(self, rpy):
-        self.R_perturb_b = rot3dzp(rpy[2]) @ rot3dyp(rpy[1]) @ rot3dxp(rpy[0])
-        self.R_vb = self.R_perturb_b @ rot3dzp(self.rpy[2]) @ rot3dyp(self.rpy[1]) @ rot3dxp(self.rpy[0])
-        self.UpdateSim()
-
-    def UpdateGimbalPertYPR(self, ypr_g):
-        self.R_perturb_c = rot3dxp(ypr_g[2]) @ rot3dyp(ypr_g[1]) @ rot3dzp(ypr_g[0])
-        self.R_bg = self.R_perturb_c @ rot3dxp(self.ypr_g[2]) @ rot3dyp(self.ypr_g[1]) @ rot3dzp(self.ypr_g[0])
-        self.UpdateSim()
-
+    # update UAV camera horizontal field of view limits
     def UpdateHFOV(self, h_fov):
         self.h_fov = h_fov
         self.R_cfov1_x = rot3dyp(self.h_fov / 2)
         self.R_cfov2_x = rot3dyp(-self.h_fov / 2)
         self.UpdateSim()
 
+    # update UAV camera vertical field of view limits
     def UpdateVFOV(self, v_fov):
         self.v_fov = v_fov
         self.R_cfov1_y = rot3dxp(self.v_fov / 2)
         self.R_cfov2_y = rot3dxp(-self.v_fov / 2)
         self.UpdateSim()
 
+    # updates states and simulation
     def UpdateSim(self, silent=False):
         # ----------------------- State Updates -----------------------
         self.R_ic = self.R_gc @ self.R_bg @ self.R_vb @ self.R_iv
@@ -240,8 +228,14 @@ class UAV_simulator:
             self.ax.autoscale_view()
 
             # ----------------------- Camera View Update -----------------------
-            self.camera_target_pose[0].set_xdata(self.p_i[1])
-            self.camera_target_pose[0].set_ydata(self.p_i[0])  # update target point on camera normalized image plane plot
+
+            if self.P_i[2] >= 0 and not np.any(np.isnan(self.p_i)):  # prevent plotting projection when target is behind camera or NaNs exist
+                self.camera_target_pose[0].set_xdata(self.p_i[1])
+                self.camera_target_pose[0].set_ydata(self.p_i[0])  # update target point on camera normalized image plane plot
+            else:
+                self.camera_target_pose[0].set_xdata(None)
+                self.camera_target_pose[0].set_ydata(None)
+
             self.axc.set_xlim(-self.cam_lims[1], self.cam_lims[1])  # update camera frame y limit
             self.axc.set_ylim(-self.cam_lims[0], self.cam_lims[0])  # update camera frame x limit
             self.axc.set_aspect(1)
@@ -250,17 +244,28 @@ class UAV_simulator:
 
             self.CheckInFOV()
 
+    # determines if target line of sight projection is within camera limits
     def CheckInFOV(self):
         test = self.cam_lims - np.abs(self.p_i)  # test if target point magnitude is smaller than limits
-        if np.any(test < 0):
+        border_threshold = 1e-10
+        if self.P_i[2] < 0:
+            self.in_sight = False
+            self.axc.set_xlabel('y \n Target in sight: False (Target Behind Camera)', color="red", fontweight='bold')
+        elif np.any(np.isnan(test)):
+            self.in_sight = False
+            self.axc.set_xlabel('y \n Target in sight: False (NaN)', color="red", fontweight='bold')
+        elif np.any(test < -border_threshold):
             self.in_sight = False
             self.axc.set_xlabel('y \n Target in sight: False', color="red", fontweight='bold')
+        elif np.all(test >= -border_threshold) and np.any(np.abs(test[0:2]) < border_threshold):
+            self.in_sight = True
+            self.axc.set_xlabel('y \n Target in sight: Border', color="orange", fontweight='bold')
         else:
             self.in_sight = True
             self.axc.set_xlabel('y \n Target in sight: True', color="green", fontweight='bold')
 
+    # solves rodriguez axis angle rotation equation for angle given a desired axis and point location (i.e. solution to general form a*cos(ang) + b*sin(ang) + c = 0)
     def CalculateCriticalAngles(self, v, check=False):
-        # solves rodriguez axis angle rotation equation for angle given a desired axis and point location (i.e. solution to general form a*cos(ang) + b*sin(ang) + c = 0)
         ax1 = np.tensordot(self.p_i - np.tensordot(v, self.p_i) * v, self.e1) - np.tensordot(self.cam_lims[0]*(self.p_i - np.tensordot(v, self.p_i) * v), self.e3)
         ax2 = np.tensordot(self.p_i - np.tensordot(v, self.p_i) * v, self.e1) - np.tensordot(-self.cam_lims[0]*(self.p_i - np.tensordot(v, self.p_i) * v), self.e3)
         ay1 = np.tensordot(self.p_i - np.tensordot(v, self.p_i) * v, self.e2) - np.tensordot(self.cam_lims[1]*(self.p_i - np.tensordot(v, self.p_i) * v), self.e3)
@@ -276,13 +281,19 @@ class UAV_simulator:
         cy1 = np.tensordot(np.tensordot(v, self.p_i) * v, self.e2) - np.tensordot(self.cam_lims[1]*np.tensordot(v, self.p_i) * v, self.e3)
         cy2 = np.tensordot(np.tensordot(v, self.p_i) * v, self.e2) - np.tensordot(-self.cam_lims[1]*np.tensordot(v, self.p_i) * v, self.e3)
 
-        # ARCSIN:
+        # arcsin approach:
         angx1 = np.arcsin(-cx1/np.sqrt(ax1**2 + bx1**2)) - np.arcsin(ax1/np.sqrt(ax1**2 + bx1**2))
         angx2 = np.arcsin(-cx2/np.sqrt(ax2**2 + bx2**2)) - np.arcsin(ax2/np.sqrt(ax2**2 + bx2**2))
         angy1 = np.arcsin(-cy1/np.sqrt(ay1**2 + by1**2)) - np.arcsin(ay1/np.sqrt(ay1**2 + by1**2))
         angy2 = np.arcsin(-cy2/np.sqrt(ay2**2 + by2**2)) - np.arcsin(ay2/np.sqrt(ay2**2 + by2**2))
 
-        # # ARCTAN2:
+        # # arctan approach:
+        # angx1 = np.arcsin(-cx1 / np.sqrt(ax1 ** 2 + bx1 ** 2)) - np.arctan(ax1 / bx1)
+        # angx2 = np.arcsin(-cx2 / np.sqrt(ax2 ** 2 + bx2 ** 2)) - np.arctan(ax2 / bx2)
+        # angy1 = np.arcsin(-cy1 / np.sqrt(ay1 ** 2 + by1 ** 2)) - np.arctan(ay1 / by1)
+        # angy2 = np.arcsin(-cy2 / np.sqrt(ay2 ** 2 + by2 ** 2)) - np.arctan(ay2 / by2)
+
+        # # arctan2 approach:
         # angx1 = np.arcsin(-cx1 / np.sqrt(ax1 ** 2 + bx1 ** 2)) - np.arctan2(ax1, bx1)
         # angx2 = np.arcsin(-cx2 / np.sqrt(ax2 ** 2 + bx2 ** 2)) - np.arctan2(ax2, bx2)
         # angy1 = np.arcsin(-cy1 / np.sqrt(ay1 ** 2 + by1 ** 2)) - np.arctan2(ay1, by1)
@@ -326,6 +337,7 @@ class UAV_simulator:
 
         return [ang1, ang2, ang3, ang4]
 
+    # calculates passive rotation matrix from axis angle rotation
     def axis_angle_to_R(self, ax, ang):
         R = np.array([[np.cos(ang) + ax[0, 0] ** 2 * (1 - np.cos(ang)),
                        ax[0, 0] * ax[1, 0] * (1 - np.cos(ang)) - ax[2, 0] * np.sin(ang),
