@@ -83,107 +83,131 @@ if __name__ == "__main__":
 
     disp_time = 1.0
 
-    sim.UpdatePertR(sim.axis_angle_to_R(v_r, ang1))
-    print("Displaying Right Roll Constraint...")
-    plt.pause(disp_time)
-    sim.UpdatePertR(sim.axis_angle_to_R(v_r, ang2))
-    print("Displaying Left Roll Constraint...")
-    plt.pause(disp_time)
-    sim.UpdatePertR(sim.axis_angle_to_R(v_r, ang3))
-    print("Displaying Top Roll Constraint...")
-    plt.pause(disp_time)
-    sim.UpdatePertR(sim.axis_angle_to_R(v_r, ang4))
-    print("Displaying Bottom Roll Constraint...")
-    plt.pause(disp_time)
+    for i in range(len(ang1)):
+        sim.UpdatePertR(sim.axis_angle_to_R(v_r, ang1[i]))
+        print("Displaying Right Roll Constraint...")
+        plt.pause(disp_time)
+    for i in range(len(ang2)):
+        sim.UpdatePertR(sim.axis_angle_to_R(v_r, ang2[i]))
+        print("Displaying Left Roll Constraint...")
+        plt.pause(disp_time)
+    for i in range(len(ang3)):
+        sim.UpdatePertR(sim.axis_angle_to_R(v_r, ang3[i]))
+        print("Displaying Top Roll Constraint...")
+        plt.pause(disp_time)
+    for i in range(len(ang4)):
+        sim.UpdatePertR(sim.axis_angle_to_R(v_r, ang4[i]))
+        print("Displaying Bottom Roll Constraint...")
+        plt.pause(disp_time)
 
     # critical pitch angles
-    sim.UpdatePertR(np.eye(3), silent=True)
+    sim.UpdatePertR(np.eye(3), visualize=False)
     [ang1, ang2, ang3, ang4] = sim.CalculateCriticalAngles(v_p)  # right, left, top, bottom
     print("UAV Pitch Constraints (Left, Right, Up, Down): ", ang1, ang2, ang3, ang4)
 
-    sim.UpdatePertR(sim.axis_angle_to_R(v_p, ang1))
-    print("Displaying Right Pitch Constraint...")
-    plt.pause(disp_time)
-    sim.UpdatePertR(sim.axis_angle_to_R(v_p, ang2))
-    print("Displaying Left Pitch Constraint...")
-    plt.pause(disp_time)
-    sim.UpdatePertR(sim.axis_angle_to_R(v_p, ang3))
-    print("Displaying Top Pitch Constraint...")
-    plt.pause(disp_time)
-    sim.UpdatePertR(sim.axis_angle_to_R(v_p, ang4))
-    print("Displaying Bottom Pitch Constraint...")
-    plt.pause(disp_time)
+    for i in range(len(ang1)):
+        sim.UpdatePertR(sim.axis_angle_to_R(v_p, ang1[i]))
+        print("Displaying Right Pitch Constraint...")
+        plt.pause(disp_time)
+    for i in range(len(ang2)):
+        sim.UpdatePertR(sim.axis_angle_to_R(v_p, ang2[i]))
+        print("Displaying Left Pitch Constraint...")
+        plt.pause(disp_time)
+    for i in range(len(ang3)):
+        sim.UpdatePertR(sim.axis_angle_to_R(v_p, ang3[i]))
+        print("Displaying Top Pitch Constraint...")
+        plt.pause(disp_time)
+    for i in range(len(ang4)):
+        sim.UpdatePertR(sim.axis_angle_to_R(v_p, ang4[i]))
+        print("Displaying Bottom Pitch Constraint...")
+        plt.pause(disp_time)
 
     # critical yaw angles
-    sim.UpdatePertR(np.eye(3), silent=True)
+    sim.UpdatePertR(np.eye(3), visualize=False)
     [ang1, ang2, ang3, ang4] = sim.CalculateCriticalAngles(v_y)  # right, left, top, bottom
     print("UAV Yaw Constraints (Left, Right, Up, Down): ", ang1, ang2, ang3, ang4)
 
-    sim.UpdatePertR(sim.axis_angle_to_R(v_y, ang1))
-    print("Displaying Right Yaw Constraint...")
-    plt.pause(disp_time)
-    sim.UpdatePertR(sim.axis_angle_to_R(v_y, ang2))
-    print("Displaying Left Yaw Constraint...")
-    plt.pause(disp_time)
-    sim.UpdatePertR(sim.axis_angle_to_R(v_y, ang3))
-    print("Displaying Top Yaw Constraint...")
-    plt.pause(disp_time)
-    sim.UpdatePertR(sim.axis_angle_to_R(v_y, ang4))
-    print("Displaying Bottom Yaw Constraint...")
-    plt.pause(disp_time)
+    for i in range(len(ang1)):
+        sim.UpdatePertR(sim.axis_angle_to_R(v_y, ang1[i]))
+        print("Displaying Right Yaw Constraint...")
+        plt.pause(disp_time)
+    for i in range(len(ang2)):
+        sim.UpdatePertR(sim.axis_angle_to_R(v_y, ang2[i]))
+        print("Displaying Left Yaw Constraint...")
+        plt.pause(disp_time)
+    for i in range(len(ang3)):
+        sim.UpdatePertR(sim.axis_angle_to_R(v_y, ang3[i]))
+        print("Displaying Top Yaw Constraint...")
+        plt.pause(disp_time)
+    for i in range(len(ang4)):
+        sim.UpdatePertR(sim.axis_angle_to_R(v_y, ang4[i]))
+        print("Displaying Bottom Yaw Constraint...")
+        plt.pause(disp_time)
 
     # critical gimbal yaw angles
-    sim.UpdatePertR(np.eye(3), silent=True)
+    sim.UpdatePertR(np.eye(3), visualize=False)
     [ang1, ang2, ang3, ang4] = sim.CalculateCriticalAngles(v_yg)  # right, left, top, bottom
     print("Gimbal Yaw Constraints (Left, Right, Up, Down): ", ang1, ang2, ang3, ang4)
 
-    sim.UpdatePertR(sim.axis_angle_to_R(v_yg, ang1))
-    print("Displaying Right Gimbal Yaw Constraint...")
-    plt.pause(disp_time)
-    sim.UpdatePertR(sim.axis_angle_to_R(v_yg, ang2))
-    print("Displaying Left Gimbal Yaw Constraint...")
-    plt.pause(disp_time)
-    sim.UpdatePertR(sim.axis_angle_to_R(v_yg, ang3))
-    print("Displaying Top Gimbal Yaw Constraint...")
-    plt.pause(disp_time)
-    sim.UpdatePertR(sim.axis_angle_to_R(v_yg, ang4))
-    print("Displaying Bottom Gimbal Yaw Constraint...")
-    plt.pause(disp_time)
+    for i in range(len(ang1)):
+        sim.UpdatePertR(sim.axis_angle_to_R(v_yg, ang1[i]))
+        print("Displaying Right Gimbal Yaw Constraint...")
+        plt.pause(disp_time)
+    for i in range(len(ang2)):
+        sim.UpdatePertR(sim.axis_angle_to_R(v_yg, ang2[i]))
+        print("Displaying Left Gimbal Yaw Constraint...")
+        plt.pause(disp_time)
+    for i in range(len(ang3)):
+        sim.UpdatePertR(sim.axis_angle_to_R(v_yg, ang3[i]))
+        print("Displaying Top Gimbal Yaw Constraint...")
+        plt.pause(disp_time)
+    for i in range(len(ang4)):
+        sim.UpdatePertR(sim.axis_angle_to_R(v_yg, ang4[i]))
+        print("Displaying Bottom Gimbal Yaw Constraint...")
+        plt.pause(disp_time)
 
     # critical gimbal pitch angles
-    sim.UpdatePertR(np.eye(3), silent=True)
+    sim.UpdatePertR(np.eye(3), visualize=False)
     [ang1, ang2, ang3, ang4] = sim.CalculateCriticalAngles(v_pg)  # right, left, top, bottom
     print("Gimbal Pitch Constraints (Left, Right, Up, Down): ", ang1, ang2, ang3, ang4)
 
-    sim.UpdatePertR(sim.axis_angle_to_R(v_pg, ang1))
-    print("Displaying Right Gimbal Pitch Constraint...")
-    plt.pause(disp_time)
-    sim.UpdatePertR(sim.axis_angle_to_R(v_pg, ang2))
-    print("Displaying Left Gimbal Pitch Constraint...")
-    plt.pause(disp_time)
-    sim.UpdatePertR(sim.axis_angle_to_R(v_pg, ang3))
-    print("Displaying Top Gimbal Pitch Constraint...")
-    plt.pause(disp_time)
-    sim.UpdatePertR(sim.axis_angle_to_R(v_pg, ang4))
-    print("Displaying Bottom Gimbal Pitch Constraint...")
-    plt.pause(disp_time)
+    for i in range(len(ang1)):
+        sim.UpdatePertR(sim.axis_angle_to_R(v_pg, ang1[i]))
+        print("Displaying Right Gimbal Pitch Constraint...")
+        plt.pause(disp_time)
+    for i in range(len(ang2)):
+        sim.UpdatePertR(sim.axis_angle_to_R(v_pg, ang2[i]))
+        print("Displaying Left Gimbal Pitch Constraint...")
+        plt.pause(disp_time)
+    for i in range(len(ang3)):
+        sim.UpdatePertR(sim.axis_angle_to_R(v_pg, ang3[i]))
+        print("Displaying Top Gimbal Pitch Constraint...")
+        plt.pause(disp_time)
+    for i in range(len(ang4)):
+        sim.UpdatePertR(sim.axis_angle_to_R(v_pg, ang4[i]))
+        print("Displaying Bottom Gimbal Pitch Constraint...")
+        plt.pause(disp_time)
 
     # critical gimbal roll angles
-    sim.UpdatePertR(np.eye(3), silent=True)
+    sim.UpdatePertR(np.eye(3), visualize=False)
     [ang1, ang2, ang3, ang4] = sim.CalculateCriticalAngles(v_rg)  # right, left, top, bottom
     print("Gimbal Roll Constraints (Left, Right, Up, Down): ", ang1, ang2, ang3, ang4)
 
-    sim.UpdatePertR(sim.axis_angle_to_R(v_rg, ang1))
-    print("Displaying Right Gimbal Roll Constraint...")
-    plt.pause(disp_time)
-    sim.UpdatePertR(sim.axis_angle_to_R(v_rg, ang2))
-    print("Displaying Left Gimbal Roll Constraint...")
-    plt.pause(disp_time)
-    sim.UpdatePertR(sim.axis_angle_to_R(v_rg, ang3))
-    print("Displaying Top Gimbal Roll Constraint...")
-    plt.pause(disp_time)
-    sim.UpdatePertR(sim.axis_angle_to_R(v_rg, ang4))
-    print("Displaying Bottom Gimbal Roll Constraint...")
-    plt.pause(disp_time)
+    for i in range(len(ang1)):
+        sim.UpdatePertR(sim.axis_angle_to_R(v_rg, ang1[i]))
+        print("Displaying Right Gimbal Roll Constraint...")
+        plt.pause(disp_time)
+    for i in range(len(ang2)):
+        sim.UpdatePertR(sim.axis_angle_to_R(v_rg, ang2[i]))
+        print("Displaying Left Gimbal Roll Constraint...")
+        plt.pause(disp_time)
+    for i in range(len(ang3)):
+        sim.UpdatePertR(sim.axis_angle_to_R(v_rg, ang3[i]))
+        print("Displaying Top Gimbal Roll Constraint...")
+        plt.pause(disp_time)
+    for i in range(len(ang4)):
+        sim.UpdatePertR(sim.axis_angle_to_R(v_rg, ang4[i]))
+        print("Displaying Bottom Gimbal Roll Constraint...")
+        plt.pause(disp_time)
 
     plt.show()
