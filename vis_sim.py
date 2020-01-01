@@ -118,10 +118,11 @@ class UAV_simulator:
         self.axc.grid(True)  # plotting show grid lines
         self.axc.set_aspect(1)
 
-        self.p_i = (self.R_ic @ (self.xt - self.x)) / (self.e3.transpose() @ self.R_ic @ (self.xt - self.x))  # target point on normalized image plane
+        self.P_i = self.R_ic @ (self.xt - self.x)
+        self.p_i = self.P_i / (self.e3.transpose() @ self.P_i)  # target point on normalized image plane
         self.camera_target_pose = self.axc.plot(self.p_i[0], self.p_i[1], 'ro', MarkerFaceColor='r')  # plot point at target pose on camera normalized image plane
 
-        self.UpdatePlots()
+        self.UpdateSim()
 
         # -------------TESTING ------------------
         v_r = self.R_gc @ self.R_bg @ self.e1
@@ -132,112 +133,124 @@ class UAV_simulator:
         v_rg = self.R_gc @ self.e1
         [ang1, ang2, ang3, ang4] = self.CalculateCriticalAngles(v_r)  # right, left, top, bottom
 
-        test = 1
-
     def UpdateX(self, x):
         self.x = x.reshape(-1, 1)
+        self.UpdateSim()
 
     def UpdateTargetX(self, xt):
         self.xt = xt.reshape(-1, 1)
+        self.UpdateSim()
 
     def UpdateRPY(self, rpy):
         self.rpy = rpy
         self.R_vb = self.R_perturb_b @ rot3dzp(self.rpy[2]) @ rot3dyp(self.rpy[1]) @ rot3dxp(self.rpy[0])
+        self.UpdateSim()
 
     def UpdateGimbalYPR(self, ypr_g):
         self.ypr_g = ypr_g
         self.R_bg = self.R_perturb_c @ rot3dxp(self.ypr_g[2]) @ rot3dyp(self.ypr_g[1]) @ rot3dzp(self.ypr_g[0])
+        self.UpdateSim()
 
-    def UpdatePertR(self, R):
+    def UpdatePertR(self, R, silent=False):
         self.R_perturb_c = R
         self.R_vb = rot3dzp(self.rpy[2]) @ rot3dyp(self.rpy[1]) @ rot3dxp(self.rpy[0])
         self.R_bg = self.R_perturb_c @ rot3dxp(self.ypr_g[2]) @ rot3dyp(self.ypr_g[1]) @ rot3dzp(self.ypr_g[0])
+        if silent:
+            self.UpdateSim(silent=True)
+        else:
+            self.UpdateSim()
 
     def UpdatePertRPY(self, rpy):
         self.R_perturb_b = rot3dzp(rpy[2]) @ rot3dyp(rpy[1]) @ rot3dxp(rpy[0])
         self.R_vb = self.R_perturb_b @ rot3dzp(self.rpy[2]) @ rot3dyp(self.rpy[1]) @ rot3dxp(self.rpy[0])
+        self.UpdateSim()
 
     def UpdateGimbalPertYPR(self, ypr_g):
         self.R_perturb_c = rot3dxp(ypr_g[2]) @ rot3dyp(ypr_g[1]) @ rot3dzp(ypr_g[0])
         self.R_bg = self.R_perturb_c @ rot3dxp(self.ypr_g[2]) @ rot3dyp(self.ypr_g[1]) @ rot3dzp(self.ypr_g[0])
+        self.UpdateSim()
 
     def UpdateHFOV(self, h_fov):
         self.h_fov = h_fov
         self.R_cfov1_x = rot3dyp(self.h_fov / 2)
         self.R_cfov2_x = rot3dyp(-self.h_fov / 2)
+        self.UpdateSim()
 
     def UpdateVFOV(self, v_fov):
         self.v_fov = v_fov
         self.R_cfov1_y = rot3dxp(self.v_fov / 2)
         self.R_cfov2_y = rot3dxp(-self.v_fov / 2)
+        self.UpdateSim()
 
-    def UpdatePlots(self):
-        # ----------------------- 3D Simulation Update -----------------------
-
-        # Rotate animation lines and points back out to common inertial frame for plotting
-        llos = np.hstack([self.x, self.xt])  # line of sight vector
-        lx = np.hstack((np.zeros((3, 1)), self.e1))*self.x_line_scale
-        lquiv = np.hstack((np.zeros((3, 1)), self.e1)) * self.uav_length
-        lquiv = self.R_iv.transpose() @ self.R_vb.transpose() @ lquiv + self.x  # transformed UAV heading arrow
-        lcamx = self.R_iv.transpose() @ self.R_vb.transpose() @ self.R_bg.transpose() @ self.R_gc.transpose() @ lx + self.x  # transformed camera x-axis line
-        lbNorth = self.R_iv.transpose() @ lx + self.x  # transformed North heading line
-        L = np.hstack((self.R_cfov1_y.transpose() @ self.R_cfov1_x.transpose() @ self.e3,
-                       self.R_cfov2_y.transpose() @ self.R_cfov1_x.transpose() @ self.e3,
-                       self.R_cfov2_y.transpose() @ self.R_cfov2_x.transpose() @ self.e3,
-                       self.R_cfov1_y.transpose() @ self.R_cfov2_x.transpose() @ self.e3))  # field of view corner lines
-        L_v = self.R_vb.transpose() @ self.R_bg.transpose() @ self.R_gc.transpose() @ L  # field of view corner lines in vehicle frame
-        pts = self.R_iv @ (self.x[2] * L_v @ np.linalg.inv(np.diag((self.e3.transpose() @ L_v)[0]))) + self.x  # field of view corners projected on observation plane
-        plpts = np.hstack((pts, pts[:, 0].reshape(-1, 1)))  # field of view extent points (with redundant final point)
-        lfov1 = np.hstack((self.x, pts[:, 0].reshape(-1, 1)))  # field of view corner line 1
-        lfov2 = np.hstack((self.x, pts[:, 1].reshape(-1, 1)))  # field of view corner line 2
-        lfov3 = np.hstack((self.x, pts[:, 2].reshape(-1, 1)))  # field of view corner line 3
-        lfov4 = np.hstack((self.x, pts[:, 3].reshape(-1, 1)))  # field of view corner line 4
-
-        l_temp = self.R_vb.transpose() @ self.R_bg.transpose() @ self.R_gc.transpose() @ self.e3
-        pts_temp = self.R_iv @ (self.x[2] * l_temp @ np.linalg.inv(np.diag((self.e3.transpose() @ l_temp)[0]))) + self.x  # optical axis line points on observation plane
-        loptax = np.hstack((self.x, pts_temp.reshape(-1, 1)))  # optical axis line
-
-        l_temp = self.R_vb.transpose() @ self.e3
-        pts_temp = self.R_iv @ (self.x[2] * l_temp @ np.linalg.inv(np.diag((self.e3.transpose() @ l_temp)[0]))) + self.x  # body z-axis line points on observation plane
-        lbz = np.hstack((self.x, pts_temp.reshape(-1, 1)))  # z-axis body frame line
-
-        # Plotting handles
-        self.plos[0].set_data_3d(llos[0, :], llos[1, :], llos[2, :])  # plot line of sight vector
-        self.pose_point[0].set_data_3d(self.x[0], self.x[1], self.x[2])  # plot point at UAV pose
-        self.pose_line[0].set_data_3d([self.x[0].item(), self.x[0].item()], [self.x[1].item(), self.x[1].item()], [self.x[2].item(), 0])  # plot UAV pose line perpendicular to observation plane
-        self.pose_target[0].set_data_3d(self.xt[0], self.xt[1], self.xt[2])  # plot point at target pose
-        self.ploptax[0].set_data_3d(loptax[0, :], loptax[1, :], loptax[2, :])  # plot optical axis line
-        self.plfov1[0].set_data_3d(lfov1[0, :], lfov1[1, :], lfov1[2, :])  # plot field of view line 1
-        self.plfov2[0].set_data_3d(lfov2[0, :], lfov2[1, :], lfov2[2, :])  # plot field of view line 2
-        self.plfov3[0].set_data_3d(lfov3[0, :], lfov3[1, :], lfov3[2, :])  # plot field of view line 3
-        self.plfov4[0].set_data_3d(lfov4[0, :], lfov4[1, :], lfov4[2, :])  # plot field of view line 4
-        self.plcamx[0].set_data_3d(lcamx[0, :], lcamx[1, :], lcamx[2, :])  # plot camera x axis
-        self.plbNorth[0].set_data_3d(lbNorth[0, :], lbNorth[1, :], lbNorth[2, :])  # plot North heading line on body
-        self.plbz[0].set_data_3d(lbz[0, :], lbz[1, :], lbz[2, :])  # plot z-axis body frame line
-        self.pfov[0].set_data_3d(plpts[0, :], plpts[1, :], plpts[2, :])  # plot field of view polygon projection on observation plane
-        self.quiv[0].set_data_3d(lquiv[0, :], lquiv[1, :], lquiv[2, :])  # plot UAV arrow
-
-        self.ax.autoscale_view()
-
-        # ----------------------- Camera View Update -----------------------
+    def UpdateSim(self, silent=False):
+        # ----------------------- State Updates -----------------------
         self.R_ic = self.R_gc @ self.R_bg @ self.R_vb @ self.R_iv
-        self.p_i = (self.R_ic @ (self.xt - self.x)) / (self.e3.transpose() @ self.R_ic @ (self.xt - self.x))  # target point on normalized image plane
-        self.camera_target_pose[0].set_xdata(self.p_i[1])
-        self.camera_target_pose[0].set_ydata(self.p_i[0])  # update target point on camera normalized image plane
+        self.P_i = self.R_ic @ (self.xt - self.x)
+        self.p_i = self.P_i / (self.e3.transpose() @ self.P_i)  # target point on normalized image plane
 
         self.cam_lims = (self.R_cfov2_y.transpose() @ self.R_cfov1_x.transpose() @ self.e3) / (
-                    self.e3.transpose() @ self.R_cfov2_y.transpose() @ self.R_cfov1_x.transpose() @ self.e3)
+                self.e3.transpose() @ self.R_cfov2_y.transpose() @ self.R_cfov1_x.transpose() @ self.e3)
 
-        self.axc.set_xlim(-self.cam_lims[1], self.cam_lims[1])  # camera frame y limit
-        self.axc.set_ylim(-self.cam_lims[0], self.cam_lims[0])  # camera frame x limit
-        self.axc.set_aspect(1)
+        if not silent:
+            # ----------------------- 3D Simulation Update -----------------------
 
-        plt.pause(0.01)
+            # Rotate animation lines and points back out to common inertial frame for plotting
+            llos = np.hstack([self.x, self.xt])  # line of sight vector
+            lx = np.hstack((np.zeros((3, 1)), self.e1))*self.x_line_scale
+            lquiv = np.hstack((np.zeros((3, 1)), self.e1)) * self.uav_length
+            lquiv = self.R_iv.transpose() @ self.R_vb.transpose() @ lquiv + self.x  # transformed UAV heading arrow
+            lcamx = self.R_iv.transpose() @ self.R_vb.transpose() @ self.R_bg.transpose() @ self.R_gc.transpose() @ lx + self.x  # transformed camera x-axis line
+            lbNorth = self.R_iv.transpose() @ lx + self.x  # transformed North heading line
+            L = np.hstack((self.R_cfov1_y.transpose() @ self.R_cfov1_x.transpose() @ self.e3,
+                           self.R_cfov2_y.transpose() @ self.R_cfov1_x.transpose() @ self.e3,
+                           self.R_cfov2_y.transpose() @ self.R_cfov2_x.transpose() @ self.e3,
+                           self.R_cfov1_y.transpose() @ self.R_cfov2_x.transpose() @ self.e3))  # field of view corner lines
+            L_v = self.R_vb.transpose() @ self.R_bg.transpose() @ self.R_gc.transpose() @ L  # field of view corner lines in vehicle frame
+            pts = self.R_iv @ (self.x[2] * L_v @ np.linalg.inv(np.diag((self.e3.transpose() @ L_v)[0]))) + self.x  # field of view corners projected on observation plane
+            plpts = np.hstack((pts, pts[:, 0].reshape(-1, 1)))  # field of view extent points (with redundant final point)
+            lfov1 = np.hstack((self.x, pts[:, 0].reshape(-1, 1)))  # field of view corner line 1
+            lfov2 = np.hstack((self.x, pts[:, 1].reshape(-1, 1)))  # field of view corner line 2
+            lfov3 = np.hstack((self.x, pts[:, 2].reshape(-1, 1)))  # field of view corner line 3
+            lfov4 = np.hstack((self.x, pts[:, 3].reshape(-1, 1)))  # field of view corner line 4
 
-        self.CheckInFOV()
+            l_temp = self.R_vb.transpose() @ self.R_bg.transpose() @ self.R_gc.transpose() @ self.e3
+            pts_temp = self.R_iv @ (self.x[2] * l_temp @ np.linalg.inv(np.diag((self.e3.transpose() @ l_temp)[0]))) + self.x  # optical axis line points on observation plane
+            loptax = np.hstack((self.x, pts_temp.reshape(-1, 1)))  # optical axis line
+
+            l_temp = self.R_vb.transpose() @ self.e3
+            pts_temp = self.R_iv @ (self.x[2] * l_temp @ np.linalg.inv(np.diag((self.e3.transpose() @ l_temp)[0]))) + self.x  # body z-axis line points on observation plane
+            lbz = np.hstack((self.x, pts_temp.reshape(-1, 1)))  # z-axis body frame line
+
+            # Plotting handles
+            self.plos[0].set_data_3d(llos[0, :], llos[1, :], llos[2, :])  # plot line of sight vector
+            self.pose_point[0].set_data_3d(self.x[0], self.x[1], self.x[2])  # plot point at UAV pose
+            self.pose_line[0].set_data_3d([self.x[0].item(), self.x[0].item()], [self.x[1].item(), self.x[1].item()], [self.x[2].item(), 0])  # plot UAV pose line perpendicular to observation plane
+            self.pose_target[0].set_data_3d(self.xt[0], self.xt[1], self.xt[2])  # plot point at target pose
+            self.ploptax[0].set_data_3d(loptax[0, :], loptax[1, :], loptax[2, :])  # plot optical axis line
+            self.plfov1[0].set_data_3d(lfov1[0, :], lfov1[1, :], lfov1[2, :])  # plot field of view line 1
+            self.plfov2[0].set_data_3d(lfov2[0, :], lfov2[1, :], lfov2[2, :])  # plot field of view line 2
+            self.plfov3[0].set_data_3d(lfov3[0, :], lfov3[1, :], lfov3[2, :])  # plot field of view line 3
+            self.plfov4[0].set_data_3d(lfov4[0, :], lfov4[1, :], lfov4[2, :])  # plot field of view line 4
+            self.plcamx[0].set_data_3d(lcamx[0, :], lcamx[1, :], lcamx[2, :])  # plot camera x axis
+            self.plbNorth[0].set_data_3d(lbNorth[0, :], lbNorth[1, :], lbNorth[2, :])  # plot North heading line on body
+            self.plbz[0].set_data_3d(lbz[0, :], lbz[1, :], lbz[2, :])  # plot z-axis body frame line
+            self.pfov[0].set_data_3d(plpts[0, :], plpts[1, :], plpts[2, :])  # plot field of view polygon projection on observation plane
+            self.quiv[0].set_data_3d(lquiv[0, :], lquiv[1, :], lquiv[2, :])  # plot UAV arrow
+
+            self.ax.autoscale_view()
+
+            # ----------------------- Camera View Update -----------------------
+            self.camera_target_pose[0].set_xdata(self.p_i[1])
+            self.camera_target_pose[0].set_ydata(self.p_i[0])  # update target point on camera normalized image plane plot
+            self.axc.set_xlim(-self.cam_lims[1], self.cam_lims[1])  # update camera frame y limit
+            self.axc.set_ylim(-self.cam_lims[0], self.cam_lims[0])  # update camera frame x limit
+            self.axc.set_aspect(1)
+
+            plt.pause(0.01)
+
+            self.CheckInFOV()
 
     def CheckInFOV(self):
-        self.p_i = (self.R_ic @ (self.xt - self.x)) / (self.e3.transpose() @ self.R_ic @ (self.xt - self.x))  # target point on normalized image plane
         test = self.cam_lims - np.abs(self.p_i)  # test if target point magnitude is smaller than limits
         if np.any(test < 0):
             self.in_sight = False
@@ -247,9 +260,6 @@ class UAV_simulator:
             self.axc.set_xlabel('y \n Target in sight: True', color="green", fontweight='bold')
 
     def CalculateCriticalAngles(self, v, check=False):
-        self.R_ic = self.R_gc @ self.R_bg @ self.R_vb @ self.R_iv
-        self.p_i = (self.R_ic @ (self.xt - self.x)) / (self.e3.transpose() @ self.R_ic @ (self.xt - self.x))  # target point on normalized image plane
-
         # solves rodriguez axis angle rotation equation for angle given a desired axis and point location (i.e. solution to general form a*cos(ang) + b*sin(ang) + c = 0)
         ax1 = np.tensordot(self.p_i - np.tensordot(v, self.p_i) * v, self.e1) - np.tensordot(self.cam_lims[0]*(self.p_i - np.tensordot(v, self.p_i) * v), self.e3)
         ax2 = np.tensordot(self.p_i - np.tensordot(v, self.p_i) * v, self.e1) - np.tensordot(-self.cam_lims[0]*(self.p_i - np.tensordot(v, self.p_i) * v), self.e3)
@@ -266,10 +276,17 @@ class UAV_simulator:
         cy1 = np.tensordot(np.tensordot(v, self.p_i) * v, self.e2) - np.tensordot(self.cam_lims[1]*np.tensordot(v, self.p_i) * v, self.e3)
         cy2 = np.tensordot(np.tensordot(v, self.p_i) * v, self.e2) - np.tensordot(-self.cam_lims[1]*np.tensordot(v, self.p_i) * v, self.e3)
 
+        # ARCSIN:
         angx1 = np.arcsin(-cx1/np.sqrt(ax1**2 + bx1**2)) - np.arcsin(ax1/np.sqrt(ax1**2 + bx1**2))
         angx2 = np.arcsin(-cx2/np.sqrt(ax2**2 + bx2**2)) - np.arcsin(ax2/np.sqrt(ax2**2 + bx2**2))
         angy1 = np.arcsin(-cy1/np.sqrt(ay1**2 + by1**2)) - np.arcsin(ay1/np.sqrt(ay1**2 + by1**2))
         angy2 = np.arcsin(-cy2/np.sqrt(ay2**2 + by2**2)) - np.arcsin(ay2/np.sqrt(ay2**2 + by2**2))
+
+        # # ARCTAN2:
+        # angx1 = np.arcsin(-cx1 / np.sqrt(ax1 ** 2 + bx1 ** 2)) - np.arctan2(ax1, bx1)
+        # angx2 = np.arcsin(-cx2 / np.sqrt(ax2 ** 2 + bx2 ** 2)) - np.arctan2(ax2, bx2)
+        # angy1 = np.arcsin(-cy1 / np.sqrt(ay1 ** 2 + by1 ** 2)) - np.arctan2(ay1, by1)
+        # angy2 = np.arcsin(-cy2 / np.sqrt(ay2 ** 2 + by2 ** 2)) - np.arctan2(ay2, by2)
 
         if check:  # used for returning values of positive angles without assessment of negative angles
             ang1 = angy1
@@ -277,15 +294,15 @@ class UAV_simulator:
             ang3 = angx1
             ang4 = angx2
         else:  # assess result of positive and negative angles to see which results in a rotation constraint of 0 when applied
-            self.UpdatePertR(self.axis_angle_to_R(v, angy1))
+            self.UpdatePertR(self.axis_angle_to_R(v, angy1), silent=True)
             cangy1, _, _, _ = self.CalculateCriticalAngles(v, True)  # right edge constraint
-            self.UpdatePertR(self.axis_angle_to_R(v, angy2))
+            self.UpdatePertR(self.axis_angle_to_R(v, angy2), silent=True)
             _, cangy2, _, _ = self.CalculateCriticalAngles(v, True)  # left edge constraint
-            self.UpdatePertR(self.axis_angle_to_R(v, angx1))
+            self.UpdatePertR(self.axis_angle_to_R(v, angx1), silent=True)
             _, _, cangx1, _ = self.CalculateCriticalAngles(v, True)  # top edge constraint
-            self.UpdatePertR(self.axis_angle_to_R(v, angx2))
+            self.UpdatePertR(self.axis_angle_to_R(v, angx2), silent=True)
             _, _, _, cangx2 = self.CalculateCriticalAngles(v, True)  # bottom edge constraint
-            self.UpdatePertR(self.axis_angle_to_R(v, 0))
+            self.UpdatePertR(self.axis_angle_to_R(v, 0), silent=True)
 
             if np.abs(cangy1) < 1e-14:
                 ang1 = angy1
@@ -319,4 +336,4 @@ class UAV_simulator:
                       [ax[0, 0] * ax[2, 0] * (1 - np.cos(ang)) - ax[1, 0] * np.sin(ang),
                        ax[1, 0] * ax[2, 0] * (1 - np.cos(ang)) + ax[0, 0] * np.sin(ang),
                        np.cos(ang) + ax[2, 0] ** 2 * (1 - np.cos(ang))]])
-        return R.transpose()
+        return R.transpose()  # returns passive transform
