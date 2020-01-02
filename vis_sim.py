@@ -267,7 +267,7 @@ class UAV_simulator:
                 self.axc.set_xlabel('y \n Target in sight: True', color="green", fontweight='bold')
 
     # solves rodriguez axis angle rotation equation for angle given a desired axis and point location (i.e. solution to general form a*cos(ang) + b*sin(ang) + c = 0)
-    def CalculateCriticalAngles(self, v, test=False):
+    def CalculateCriticalAngles(self, v, test=False, all=False):
         ax1 = np.tensordot(self.p_i - np.tensordot(v, self.p_i) * v, self.e1) - np.tensordot(self.cam_lims[0]*(self.p_i - np.tensordot(v, self.p_i) * v), self.e3)
         ax2 = np.tensordot(self.p_i - np.tensordot(v, self.p_i) * v, self.e1) - np.tensordot(-self.cam_lims[0]*(self.p_i - np.tensordot(v, self.p_i) * v), self.e3)
         ay1 = np.tensordot(self.p_i - np.tensordot(v, self.p_i) * v, self.e2) - np.tensordot(self.cam_lims[1]*(self.p_i - np.tensordot(v, self.p_i) * v), self.e3)
@@ -372,6 +372,20 @@ class UAV_simulator:
             ang2 = np.unique(angy2[(np.abs(cangy2) < 1e-14) * (np.abs(angy2) < np.pi)])
             ang3 = np.unique(angx1[(np.abs(cangx1) < 1e-14) * (np.abs(angx1) < np.pi)])
             ang4 = np.unique(angx2[(np.abs(cangx2) < 1e-14) * (np.abs(angx2) < np.pi)])
+            if not all:
+                angs = np.hstack((ang1, ang2, ang3, ang4))
+                try:
+                    ang1 = np.array([angs[np.where(angs < 0, angs, -np.inf).argmax()]])
+                except:
+                    ang1 = np.array([])
+                try:
+                    ang2 = np.array([angs[np.where(angs > 0, angs, np.inf).argmin()]])
+                except:
+                    ang2 = np.array([])
+                ang3 = np.array([])
+                ang4 = np.array([])
+            else:
+                pass
 
             # if np.abs(cangy1) < 1e-14:
             #     ang1 = angy1[0]
