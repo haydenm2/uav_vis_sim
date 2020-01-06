@@ -283,7 +283,7 @@ class UAV_simulator:
         cy1 = np.tensordot(np.tensordot(v, self.p_i) * v, self.e2) - np.tensordot(self.cam_lims[1]*np.tensordot(v, self.p_i) * v, self.e3)
         cy2 = np.tensordot(np.tensordot(v, self.p_i) * v, self.e2) - np.tensordot(-self.cam_lims[1]*np.tensordot(v, self.p_i) * v, self.e3)
 
-        # arcsin approach:
+        # stack all possible solutions for critical angles on each image edge
         angx1 = np.array([])
         angx2 = np.array([])
         angy1 = np.array([])
@@ -329,18 +329,6 @@ class UAV_simulator:
         angy1 = np.hstack((angy1, angy1mp))
         angy2 = np.hstack((angy2, angy2mp))
 
-        # # arctan approach:
-        # angx1 = np.arcsin(-cx1 / np.sqrt(ax1 ** 2 + bx1 ** 2)) - np.arctan(ax1 / bx1)
-        # angx2 = np.arcsin(-cx2 / np.sqrt(ax2 ** 2 + bx2 ** 2)) - np.arctan(ax2 / bx2)
-        # angy1 = np.arcsin(-cy1 / np.sqrt(ay1 ** 2 + by1 ** 2)) - np.arctan(ay1 / by1)
-        # angy2 = np.arcsin(-cy2 / np.sqrt(ay2 ** 2 + by2 ** 2)) - np.arctan(ay2 / by2)
-
-        # # arctan2 approach:
-        # angx1 = np.arcsin(-cx1 / np.sqrt(ax1 ** 2 + bx1 ** 2)) - np.arctan2(ax1, bx1)
-        # angx2 = np.arcsin(-cx2 / np.sqrt(ax2 ** 2 + bx2 ** 2)) - np.arctan2(ax2, bx2)
-        # angy1 = np.arcsin(-cy1 / np.sqrt(ay1 ** 2 + by1 ** 2)) - np.arctan2(ay1, by1)
-        # angy2 = np.arcsin(-cy2 / np.sqrt(ay2 ** 2 + by2 ** 2)) - np.arctan2(ay2, by2)
-
         if test:  # used for returning values of positive angles without assessment of negative angles
             if self.in_sight:
                 ang1 = angy1[0]
@@ -368,10 +356,13 @@ class UAV_simulator:
                 _, _, _, cangx2[i] = self.CalculateCriticalAngles(v, test=True)  # bottom edge constraint
                 self.UpdatePertR(self.axis_angle_to_R(v, 0), visualize=False)
 
+            # save angles whose perturbations result in new perturbation commands close to zero
             ang1 = np.unique(angy1[(np.abs(cangy1) < 1e-14) * (np.abs(angy1) < np.pi)])
             ang2 = np.unique(angy2[(np.abs(cangy2) < 1e-14) * (np.abs(angy2) < np.pi)])
             ang3 = np.unique(angx1[(np.abs(cangx1) < 1e-14) * (np.abs(angx1) < np.pi)])
             ang4 = np.unique(angx2[(np.abs(cangx2) < 1e-14) * (np.abs(angx2) < np.pi)])
+
+            # determine the two angles whose solutions are closest to the current position (smallest magnitude angles on either side)
             if not all:
                 angs = np.hstack((ang1, ang2, ang3, ang4))
                 try:
@@ -386,26 +377,6 @@ class UAV_simulator:
                 ang4 = np.array([])
             else:
                 pass
-
-            # if np.abs(cangy1) < 1e-14:
-            #     ang1 = angy1[0]
-            # else:
-            #     ang1 = -angy1[0]
-            #
-            # if np.abs(cangy2) < 1e-14:
-            #     ang2 = angy2[0]
-            # else:
-            #     ang2 = -angy2[0]
-            #
-            # if np.abs(cangx1) < 1e-14:
-            #     ang3 = angx1[0]
-            # else:
-            #     ang3 = -angx1[0]
-            #
-            # if np.abs(cangx2) < 1e-14:
-            #     ang4 = angx2[0]
-            # else:
-            #     ang4 = -angx2[0]
 
         return [ang1, ang2, ang3, ang4]
 
