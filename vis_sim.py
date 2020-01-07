@@ -484,6 +484,7 @@ class UAV_simulator:
             # determine the two angles whose solutions are closest to the current position (smallest magnitude angles on either side)
             if not all:
                 angs = np.hstack((ang1, ang2, ang3, ang4))
+                print(angs*180/np.pi)
                 try:
                     # get largest negative angle
                     ang1 = np.array([angs[np.where(angs < 0, angs, -np.inf).argmax()]])
@@ -494,6 +495,9 @@ class UAV_simulator:
                     ang2 = np.array([angs[np.where(angs > 0, angs, np.inf).argmin()]])
                 except:
                     ang2 = np.array([])
+                # if angles all have same sign then return both angles
+                if ang1 == ang2:
+                    ang2 = angs[angs != ang1]
                 # only max of two closest angles (one on either side) so others are cleared
                 ang3 = np.array([])
                 ang4 = np.array([])
