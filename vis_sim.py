@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits import mplot3d
+from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 
 def rot3dxp(ang):
     R = np.array([[1, 0, 0], [0, np.cos(ang), -np.sin(ang)], [0, np.sin(ang), np.cos(ang)]]).transpose()
@@ -15,16 +16,15 @@ def rot3dzp(ang):
     return R
 
 class UAV_simulator:
-    def __init__(self, x0=np.array([[10], [10], [40]]), xt0=np.array([[0], [0], [0]]), rpy=np.array([np.deg2rad(0), np.deg2rad(0), np.deg2rad(0)]), ypr_g=np.array([np.deg2rad(0), np.deg2rad(0), np.deg2rad(0)]), h_fov=np.deg2rad(45), v_fov=np.deg2rad(45)):
+    def __init__(self, x0=np.array([[10], [10], [40]]), xt0=np.array([[0], [0], [0]]), ypr=np.array([np.deg2rad(0), np.deg2rad(0), np.deg2rad(0)]), ypr_g=np.array([np.deg2rad(0), np.deg2rad(0), np.deg2rad(0)]), h_fov=np.deg2rad(45), v_fov=np.deg2rad(45)):
         # UAV and target conditions
         self.x = x0     # UAV state
         self.xt = xt0     # target state
-        self.rpy = rpy   # UAV attitude (roll, pitch, yaw)
+        self.ypr = ypr   # UAV attitude (yaw, pitch, roll)
         self.ypr_g = ypr_g   # gimbal attitude (yaw, pitch, roll)
         self.h_fov = h_fov     # horizontal field of view
         self.v_fov = v_fov     # vertical field of view
-        self.R_perturb_b = rot3dzp(0)
-        self.R_perturb_c = rot3dxp(0)
+        self.R_perturb = rot3dxp(0)
 
         # General vectors and plotting variables
         self.uav_length = 7
@@ -51,8 +51,8 @@ class UAV_simulator:
 
         # Define initial rotation matrices
         self.R_iv = np.array([[0, 1, 0], [1, 0, 0], [0, 0, -1]])      # rotation matrix from inertial to vehicle frame
-        self.R_vb = self.R_perturb_b @ rot3dzp(self.rpy[2]) @ rot3dyp(self.rpy[1]) @ rot3dxp(self.rpy[0])      # rotation matrix from vehicle to body frame
-        self.R_bg = self.R_perturb_c @ rot3dxp(self.ypr_g[2]) @ rot3dyp(self.ypr_g[1]) @ rot3dzp(self.ypr_g[0])      # rotation matrix from body to gimbal frame
+        self.R_vb = rot3dxp(self.ypr[2]) @ rot3dyp(self.ypr[1]) @ rot3dzp(self.ypr[0])      # rotation matrix from vehicle to body frame
+        self.R_bg = self.R_perturb @ rot3dxp(self.ypr_g[2]) @ rot3dyp(self.ypr_g[1]) @ rot3dzp(self.ypr_g[0])      # rotation matrix from body to gimbal frame
         self.R_gc = np.eye(3)      # rotation matrix from gimbal to camera frame
         self.R_cfov1_x = rot3dyp(self.h_fov / 2)      # rotation matrix from camera to max x field of view frame
         self.R_cfov2_x = rot3dyp(-self.h_fov / 2)      # rotation matrix from camera to min x field of view frame
@@ -101,7 +101,9 @@ class UAV_simulator:
         self.plbz = self.ax.plot3D(lbz[0, :], lbz[1, :], lbz[2, :], 'k-')       # plot z-axis body frame line
         plpts = np.hstack((pts, pts[:, 0].reshape(-1, 1)))       # field of view extent points (with redundant final point)
         self.pfov = self.ax.plot3D(plpts[0, :], plpts[1, :], plpts[2, :], 'c-')       # plot field of view polygon projection on observation plane
-        self.quiv = self.ax.plot3D(lquiv[0, :], lquiv[1, :], lquiv[2, :], 'b-', LineWidth=5)       # plot UAV arrow
+        # self.quiv = self.ax.plot3D(lquiv[0, :], lquiv[1, :], lquiv[2, :], 'b-', LineWidth=5)       # plot UAV arrow
+
+        self.UpdateAirCraftModel(init=True)
 
         # ----------------------- Initialize Camera View Plot -----------------------
 
@@ -124,50 +126,67 @@ class UAV_simulator:
         self.UpdateSim()
 
     # update UAV position
-    def UpdateX(self, x):
+    def UpdateX(self, x, visualize=True):
         self.x = x.reshape(-1, 1)
-        self.UpdateSim()
+        if visualize:
+            self.UpdateSim()
+        else:
+            self.UpdateSim(visualize=False)
 
     # update target position
-    def UpdateTargetX(self, xt):
+    def UpdateTargetX(self, xt, visualize=True):
         self.xt = xt.reshape(-1, 1)
-        self.UpdateSim()
+        if visualize:
+            self.UpdateSim()
+        else:
+            self.UpdateSim(visualize=False)
 
     # update UAV orientation
-    def UpdateRPY(self, rpy):
-        self.rpy = rpy
-        self.R_vb = self.R_perturb_b @ rot3dzp(self.rpy[2]) @ rot3dyp(self.rpy[1]) @ rot3dxp(self.rpy[0])
-        self.UpdateSim()
+    def UpdateYPR(self, ypr, visualize=True):
+        self.ypr = ypr
+        self.R_vb = rot3dxp(self.ypr[2]) @ rot3dyp(self.ypr[1]) @ rot3dzp(self.ypr[0])
+        if visualize:
+            self.UpdateSim()
+        else:
+            self.UpdateSim(visualize=False)
 
     # update UAV gimbal orientation
-    def UpdateGimbalYPR(self, ypr_g):
+    def UpdateGimbalYPR(self, ypr_g, visualize=True):
         self.ypr_g = ypr_g
-        self.R_bg = self.R_perturb_c @ rot3dxp(self.ypr_g[2]) @ rot3dyp(self.ypr_g[1]) @ rot3dzp(self.ypr_g[0])
-        self.UpdateSim()
+        self.R_bg = self.R_perturb @ rot3dxp(self.ypr_g[2]) @ rot3dyp(self.ypr_g[1]) @ rot3dzp(self.ypr_g[0])
+        if visualize:
+            self.UpdateSim()
+        else:
+            self.UpdateSim(visualize=False)
 
     # applies general perturbation to UAV camera view orientation
     def UpdatePertR(self, R, visualize=True):
-        self.R_perturb_c = R
-        self.R_vb = rot3dzp(self.rpy[2]) @ rot3dyp(self.rpy[1]) @ rot3dxp(self.rpy[0])
-        self.R_bg = self.R_perturb_c @ rot3dxp(self.ypr_g[2]) @ rot3dyp(self.ypr_g[1]) @ rot3dzp(self.ypr_g[0])
+        self.R_perturb = R
+        self.R_bg = self.R_perturb @ rot3dxp(self.ypr_g[2]) @ rot3dyp(self.ypr_g[1]) @ rot3dzp(self.ypr_g[0])
         if visualize:
             self.UpdateSim()
         else:
             self.UpdateSim(visualize=False)
 
     # update UAV camera horizontal field of view limits
-    def UpdateHFOV(self, h_fov):
+    def UpdateHFOV(self, h_fov, visualize=True):
         self.h_fov = h_fov
         self.R_cfov1_x = rot3dyp(self.h_fov / 2)
         self.R_cfov2_x = rot3dyp(-self.h_fov / 2)
-        self.UpdateSim()
+        if visualize:
+            self.UpdateSim()
+        else:
+            self.UpdateSim(visualize=False)
 
     # update UAV camera vertical field of view limits
-    def UpdateVFOV(self, v_fov):
+    def UpdateVFOV(self, v_fov, visualize=True):
         self.v_fov = v_fov
         self.R_cfov1_y = rot3dxp(self.v_fov / 2)
         self.R_cfov2_y = rot3dxp(-self.v_fov / 2)
-        self.UpdateSim()
+        if visualize:
+            self.UpdateSim()
+        else:
+            self.UpdateSim(visualize=False)
 
     # updates states and simulation
     def UpdateSim(self, visualize=True):
@@ -222,7 +241,9 @@ class UAV_simulator:
             self.plbNorth[0].set_data_3d(lbNorth[0, :], lbNorth[1, :], lbNorth[2, :])  # plot North heading line on body
             self.plbz[0].set_data_3d(lbz[0, :], lbz[1, :], lbz[2, :])  # plot z-axis body frame line
             self.pfov[0].set_data_3d(plpts[0, :], plpts[1, :], plpts[2, :])  # plot field of view polygon projection on observation plane
-            self.quiv[0].set_data_3d(lquiv[0, :], lquiv[1, :], lquiv[2, :])  # plot UAV arrow
+            # self.quiv[0].set_data_3d(lquiv[0, :], lquiv[1, :], lquiv[2, :])  # plot UAV arrow
+
+            self.UpdateAirCraftModel()  # update UAV model plot
 
             self.ax.autoscale_view()
 
@@ -366,13 +387,16 @@ class UAV_simulator:
             if not all:
                 angs = np.hstack((ang1, ang2, ang3, ang4))
                 try:
+                    # get largest negative angle
                     ang1 = np.array([angs[np.where(angs < 0, angs, -np.inf).argmax()]])
                 except:
                     ang1 = np.array([])
                 try:
+                    # get smallest positive angle
                     ang2 = np.array([angs[np.where(angs > 0, angs, np.inf).argmin()]])
                 except:
                     ang2 = np.array([])
+                # only max of two closest angles (one on either side) so others are cleared
                 ang3 = np.array([])
                 ang4 = np.array([])
             else:
@@ -392,3 +416,98 @@ class UAV_simulator:
                        ax[1, 0] * ax[2, 0] * (1 - np.cos(ang)) + ax[0, 0] * np.sin(ang),
                        np.cos(ang) + ax[2, 0] ** 2 * (1 - np.cos(ang))]])
         return R.transpose()  # returns passive transform
+
+    def UpdateAirCraftModel(self, init=False):
+        # feature scale
+        fuse_l1 = 2
+        fuse_l2 = 1
+        fuse_l3 = 4
+        fuse_h = 1
+        fuse_w = 1
+        wing_l = 1
+        wing_w = 5
+        tail_h = 1
+        tailwing_l = 1
+        tailwing_w = 3
+
+        # points are in NED coordinates
+        points = np.array([[fuse_l1, 0, 0],  # point 1
+                           [fuse_l2, fuse_w / 2, -fuse_h / 2],  # point 2
+                           [fuse_l2, -fuse_w / 2, -fuse_h / 2],  # point 3
+                           [fuse_l2, -fuse_w / 2, fuse_h / 2],  # point 4
+                           [fuse_l2, fuse_w / 2, fuse_h / 2],  # point 5
+                           [-fuse_l3, 0, 0],  # point 6
+                           [0, wing_w / 2, 0],  # point 7
+                           [-wing_l, wing_w / 2, 0],  # point 8
+                           [-wing_l, -wing_w / 2, 0],  # point 9
+                           [0, -wing_w / 2, 0],  # point 10
+                           [-fuse_l3 + tailwing_l, tailwing_w / 2, 0],  # point 11
+                           [-fuse_l3, tailwing_w / 2, 0],  # point 12
+                           [-fuse_l3, -tailwing_w / 2, 0],  # point 13
+                           [-fuse_l3 + tailwing_l, -tailwing_w / 2, 0],  # point 14
+                           [-fuse_l3 + tailwing_l, 0, 0],  # point 15
+                           [-fuse_l3, 0, -tail_h],  # point 16
+                           ]).T
+        # scale points for better rendering
+        scale = 10
+        points = scale * points
+
+        # transform points
+        points = self.R_iv.transpose() @ self.R_vb.transpose() @ self.R_bg.transpose() @ self.R_perturb.transpose() @ self.R_bg @ points + self.x
+
+        #   define the colors for each face of triangular mesh
+        red = np.array([1., 0., 0., 1])
+        green = np.array([0., 1., 0., 1])
+        blue = np.array([0., 0., 1., 1])
+        yellow = np.array([1., 1., 0., 1])
+
+        points = points.T
+        mesh = np.array([[points[0], points[1], points[2]],  # nose 1
+                         [points[0], points[2], points[3]],  # nose 2
+                         [points[0], points[3], points[4]],  # nose 3
+                         [points[0], points[4], points[1]],  # nose 4
+                         [points[5], points[1], points[2]],  # body 1
+                         [points[5], points[2], points[3]],  # body 2
+                         [points[5], points[3], points[4]],  # body 3
+                         [points[5], points[4], points[1]],  # body 4
+                         [points[6], points[7], points[8]],  # wing 1
+                         [points[8], points[9], points[6]],  # wing 2
+                         [points[10], points[11], points[12]],  # tailwing 1
+                         [points[12], points[13], points[10]],  # tailwing 2
+                         [points[5], points[14], points[15]],  # rudder
+                         ])
+
+        MeshColor = []
+        MeshColor.append("C3")  # nose 1
+        MeshColor.append("C3")  # nose 2
+        MeshColor.append("C3")  # nose 3
+        MeshColor.append("C3")  # nose 4
+        MeshColor.append("C0")  # body 1
+        MeshColor.append("C0")  # body 2
+        MeshColor.append("C0")  # body 3
+        MeshColor.append("C0")  # body 4
+        MeshColor.append("C1")  # wing 1
+        MeshColor.append("C1")  # wing 2
+        MeshColor.append("C2")  # tailwing 1
+        MeshColor.append("C2")  # tailwing 2
+        MeshColor.append("C1")  # rudder
+
+        # update mesh for UAV
+        if init:
+            self.collection = []
+            for i in range(len(mesh)):
+                self.collection.append(Poly3DCollection([list(zip(mesh[i, :, 0], mesh[i, :, 1], mesh[i, :, 2]))]))
+                self.collection[i].set_facecolor(MeshColor[i])
+                self.ax.add_collection3d(self.collection[i])
+        else:
+            for i in range(len(mesh)):
+                self.collection[i].set_verts([list(zip(mesh[i, :, 0], mesh[i, :, 1], mesh[i, :, 2]))])
+
+        # update body frame z-axis vector plot
+        l_temp = self.R_vb.transpose() @ self.R_bg.transpose() @ self.R_perturb.transpose() @ self.R_bg @ self.e3
+        pts_temp = self.R_iv @ (self.x[2] * l_temp @ np.linalg.inv(np.diag((self.e3.transpose() @ l_temp)[0]))) + self.x  # body z-axis line points on observation plane
+        lbz = np.hstack((self.x, pts_temp.reshape(-1, 1)))  # z-axis body frame line
+        self.plbz[0].set_data_3d(lbz[0, :], lbz[1, :], lbz[2, :])  # plot z-axis body frame line
+
+
+
