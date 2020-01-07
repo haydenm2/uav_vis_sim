@@ -262,161 +262,7 @@ class UAV_simulator:
 
             plt.pause(0.01)
 
-    # determines if target line of sight projection is within camera limits
-    def CheckInFOV(self, visualize=True):
-        test = self.cam_lims - np.abs(self.p_i)  # test if target point magnitude is smaller than limits
-        border_threshold = 1e-10
-        if self.P_i[2] < 0:
-            self.in_sight = False
-            if visualize:
-                self.axc.set_xlabel('y \n Target in sight: False (Target Behind Camera)', color="red", fontweight='bold')
-        elif np.any(np.isnan(test)):
-            self.in_sight = False
-            if visualize:
-                self.axc.set_xlabel('y \n Target in sight: False (NaN)', color="red", fontweight='bold')
-        elif np.any(test < -border_threshold):
-            self.in_sight = False
-            if visualize:
-                self.axc.set_xlabel('y \n Target in sight: False', color="red", fontweight='bold')
-        elif np.all(test >= -border_threshold) and np.any(np.abs(test[0:2]) < border_threshold):
-            self.in_sight = True
-            if visualize:
-                self.axc.set_xlabel('y \n Target in sight: Border', color="orange", fontweight='bold')
-        else:
-            self.in_sight = True
-            if visualize:
-                self.axc.set_xlabel('y \n Target in sight: True', color="green", fontweight='bold')
-
-    # solves rodriguez axis angle rotation equation for angle given a desired axis and point location (i.e. solution to general form a*cos(ang) + b*sin(ang) + c = 0)
-    def CalculateCriticalAngles(self, v, test=False, all=False):
-        ax1 = np.tensordot(self.p_i - np.tensordot(v, self.p_i) * v, self.e1) - np.tensordot(self.cam_lims[0]*(self.p_i - np.tensordot(v, self.p_i) * v), self.e3)
-        ax2 = np.tensordot(self.p_i - np.tensordot(v, self.p_i) * v, self.e1) - np.tensordot(-self.cam_lims[0]*(self.p_i - np.tensordot(v, self.p_i) * v), self.e3)
-        ay1 = np.tensordot(self.p_i - np.tensordot(v, self.p_i) * v, self.e2) - np.tensordot(self.cam_lims[1]*(self.p_i - np.tensordot(v, self.p_i) * v), self.e3)
-        ay2 = np.tensordot(self.p_i - np.tensordot(v, self.p_i) * v, self.e2) - np.tensordot(-self.cam_lims[1]*(self.p_i - np.tensordot(v, self.p_i) * v), self.e3)
-
-        bx1 = np.tensordot(np.cross(v, self.p_i, axis=0), self.e1) - np.tensordot(self.cam_lims[0]*np.cross(v, self.p_i, axis=0), self.e3)
-        bx2 = np.tensordot(np.cross(v, self.p_i, axis=0), self.e1) - np.tensordot(-self.cam_lims[0]*np.cross(v, self.p_i, axis=0), self.e3)
-        by1 = np.tensordot(np.cross(v, self.p_i, axis=0), self.e2) - np.tensordot(self.cam_lims[1]*np.cross(v, self.p_i, axis=0), self.e3)
-        by2 = np.tensordot(np.cross(v, self.p_i, axis=0), self.e2) - np.tensordot(-self.cam_lims[1]*np.cross(v, self.p_i, axis=0), self.e3)
-
-        cx1 = np.tensordot(np.tensordot(v, self.p_i) * v, self.e1) - np.tensordot(self.cam_lims[0]*np.tensordot(v, self.p_i) * v, self.e3)
-        cx2 = np.tensordot(np.tensordot(v, self.p_i) * v, self.e1) - np.tensordot(-self.cam_lims[0]*np.tensordot(v, self.p_i) * v, self.e3)
-        cy1 = np.tensordot(np.tensordot(v, self.p_i) * v, self.e2) - np.tensordot(self.cam_lims[1]*np.tensordot(v, self.p_i) * v, self.e3)
-        cy2 = np.tensordot(np.tensordot(v, self.p_i) * v, self.e2) - np.tensordot(-self.cam_lims[1]*np.tensordot(v, self.p_i) * v, self.e3)
-
-        # stack all possible solutions for critical angles on each image edge
-        angx1 = np.array([])
-        angx2 = np.array([])
-        angy1 = np.array([])
-        angy2 = np.array([])
-
-        angx1 = np.hstack((angx1, np.arcsin(-cx1/np.sqrt(ax1**2 + bx1**2)) - np.arcsin(ax1/np.sqrt(ax1**2 + bx1**2))))
-        angx2 = np.hstack((angx2, np.arcsin(-cx2/np.sqrt(ax2**2 + bx2**2)) - np.arcsin(ax2/np.sqrt(ax2**2 + bx2**2))))
-        angy1 = np.hstack((angy1, np.arcsin(-cy1/np.sqrt(ay1**2 + by1**2)) - np.arcsin(ay1/np.sqrt(ay1**2 + by1**2))))
-        angy2 = np.hstack((angy2, np.arcsin(-cy2/np.sqrt(ay2**2 + by2**2)) - np.arcsin(ay2/np.sqrt(ay2**2 + by2**2))))
-
-        angx1 = np.hstack((angx1, -np.arcsin(-cx1 / np.sqrt(ax1 ** 2 + bx1 ** 2)) - np.arcsin(ax1 / np.sqrt(ax1 ** 2 + bx1 ** 2))))
-        angx2 = np.hstack((angx2, -np.arcsin(-cx2 / np.sqrt(ax2 ** 2 + bx2 ** 2)) - np.arcsin(ax2 / np.sqrt(ax2 ** 2 + bx2 ** 2))))
-        angy1 = np.hstack((angy1, -np.arcsin(-cy1 / np.sqrt(ay1 ** 2 + by1 ** 2)) - np.arcsin(ay1 / np.sqrt(ay1 ** 2 + by1 ** 2))))
-        angy2 = np.hstack((angy2, -np.arcsin(-cy2 / np.sqrt(ay2 ** 2 + by2 ** 2)) - np.arcsin(ay2 / np.sqrt(ay2 ** 2 + by2 ** 2))))
-
-        angx1 = np.hstack((angx1, -angx1[0]))
-        angx2 = np.hstack((angx2, -angx2[0]))
-        angy1 = np.hstack((angy1, -angy1[0]))
-        angy2 = np.hstack((angy2, -angy2[0]))
-
-        angx1 = np.hstack((angx1, -angx1[1]))
-        angx2 = np.hstack((angx2, -angx2[1]))
-        angy1 = np.hstack((angy1, -angy1[1]))
-        angy2 = np.hstack((angy2, -angy2[1]))
-
-        angx1pp = angx1 + np.pi
-        angx2pp = angx2 + np.pi
-        angy1pp = angy1 + np.pi
-        angy2pp = angy2 + np.pi
-
-        angx1mp = angx1 - np.pi
-        angx2mp = angx2 - np.pi
-        angy1mp = angy1 - np.pi
-        angy2mp = angy2 - np.pi
-
-        angx1 = np.hstack((angx1, angx1pp))
-        angx2 = np.hstack((angx2, angx2pp))
-        angy1 = np.hstack((angy1, angy1pp))
-        angy2 = np.hstack((angy2, angy2pp))
-
-        angx1 = np.hstack((angx1, angx1mp))
-        angx2 = np.hstack((angx2, angx2mp))
-        angy1 = np.hstack((angy1, angy1mp))
-        angy2 = np.hstack((angy2, angy2mp))
-
-        if test:  # used for returning values of positive angles without assessment of negative angles
-            if self.in_sight:
-                ang1 = angy1[0]
-                ang2 = angy2[0]
-                ang3 = angx1[0]
-                ang4 = angx2[0]
-            else:
-                ang1 = np.nan
-                ang2 = np.nan
-                ang3 = np.nan
-                ang4 = np.nan
-        else:  # assess result of positive and negative angles to see which results in a rotation constraint of 0 when applied
-            cangx1 = np.zeros(len(angx1))
-            cangx2 = np.zeros(len(angx1))
-            cangy1 = np.zeros(len(angx1))
-            cangy2 = np.zeros(len(angx1))
-            for i in range(len(angx1)):
-                self.UpdatePertR(self.axis_angle_to_R(v, angy1[i]), visualize=False)
-                cangy1[i], _, _, _ = self.CalculateCriticalAngles(v, test=True)  # right edge constraint
-                self.UpdatePertR(self.axis_angle_to_R(v, angy2[i]), visualize=False)
-                _, cangy2[i], _, _ = self.CalculateCriticalAngles(v, test=True)  # left edge constraint
-                self.UpdatePertR(self.axis_angle_to_R(v, angx1[i]), visualize=False)
-                _, _, cangx1[i], _ = self.CalculateCriticalAngles(v, test=True)  # top edge constraint
-                self.UpdatePertR(self.axis_angle_to_R(v, angx2[i]), visualize=False)
-                _, _, _, cangx2[i] = self.CalculateCriticalAngles(v, test=True)  # bottom edge constraint
-                self.UpdatePertR(self.axis_angle_to_R(v, 0), visualize=False)
-
-            # save angles whose perturbations result in new perturbation commands close to zero
-            ang1 = np.unique(angy1[(np.abs(cangy1) < 1e-14) * (np.abs(angy1) < np.pi)])
-            ang2 = np.unique(angy2[(np.abs(cangy2) < 1e-14) * (np.abs(angy2) < np.pi)])
-            ang3 = np.unique(angx1[(np.abs(cangx1) < 1e-14) * (np.abs(angx1) < np.pi)])
-            ang4 = np.unique(angx2[(np.abs(cangx2) < 1e-14) * (np.abs(angx2) < np.pi)])
-
-            # determine the two angles whose solutions are closest to the current position (smallest magnitude angles on either side)
-            if not all:
-                angs = np.hstack((ang1, ang2, ang3, ang4))
-                try:
-                    # get largest negative angle
-                    ang1 = np.array([angs[np.where(angs < 0, angs, -np.inf).argmax()]])
-                except:
-                    ang1 = np.array([])
-                try:
-                    # get smallest positive angle
-                    ang2 = np.array([angs[np.where(angs > 0, angs, np.inf).argmin()]])
-                except:
-                    ang2 = np.array([])
-                # only max of two closest angles (one on either side) so others are cleared
-                ang3 = np.array([])
-                ang4 = np.array([])
-            else:
-                pass
-
-        return [ang1, ang2, ang3, ang4]
-
-    # calculates passive rotation matrix from axis angle rotation
-    def axis_angle_to_R(self, ax, ang):
-        R = np.array([[np.cos(ang) + ax[0, 0] ** 2 * (1 - np.cos(ang)),
-                       ax[0, 0] * ax[1, 0] * (1 - np.cos(ang)) - ax[2, 0] * np.sin(ang),
-                       ax[0, 0] * ax[2, 0] * (1 - np.cos(ang)) + ax[1, 0] * np.sin(ang)],
-                      [ax[0, 0] * ax[1, 0] * (1 - np.cos(ang)) + ax[2, 0] * np.sin(ang),
-                       np.cos(ang) + ax[1, 0] ** 2 * (1 - np.cos(ang)),
-                       ax[1, 0] * ax[2, 0] * (1 - np.cos(ang)) - ax[0, 0] * np.sin(ang)],
-                      [ax[0, 0] * ax[2, 0] * (1 - np.cos(ang)) - ax[1, 0] * np.sin(ang),
-                       ax[1, 0] * ax[2, 0] * (1 - np.cos(ang)) + ax[0, 0] * np.sin(ang),
-                       np.cos(ang) + ax[2, 0] ** 2 * (1 - np.cos(ang))]])
-        return R.transpose()  # returns passive transform
-
+    # updates simulation model surfaces of aircraft system and refreshes simulation
     def UpdateAirCraftModel(self, init=False):
         # feature scale
         fuse_l1 = 2
@@ -508,6 +354,166 @@ class UAV_simulator:
         pts_temp = self.R_iv @ (self.x[2] * l_temp @ np.linalg.inv(np.diag((self.e3.transpose() @ l_temp)[0]))) + self.x  # body z-axis line points on observation plane
         lbz = np.hstack((self.x, pts_temp.reshape(-1, 1)))  # z-axis body frame line
         self.plbz[0].set_data_3d(lbz[0, :], lbz[1, :], lbz[2, :])  # plot z-axis body frame line
+
+    # determines if target line of sight projection is within camera limits
+    def CheckInFOV(self, visualize=True):
+        border_dist = self.cam_lims - np.abs(self.p_i)  # how much closer target projection point elements are to center of image than border limits
+        border_threshold = 1e-10
+        # is z-element of target vector in camera frame negative? -> behind camera = out of sight
+        if self.P_i[2] < 0:
+            self.in_sight = False
+            if visualize:
+                self.axc.set_xlabel('y \n Target in sight: False (Target Behind Camera)', color="red", fontweight='bold')
+        # are any target vector component distances from image view borders NaN? -> invalid solution = out of sight
+        elif np.any(np.isnan(border_dist)):
+            self.in_sight = False
+            if visualize:
+                self.axc.set_xlabel('y \n Target in sight: False (NaN)', color="red", fontweight='bold')
+        # are any target projection point components beyond a given threshold distance of any image borders? -> outside of field of view
+        elif np.any(border_dist < -border_threshold):
+            self.in_sight = False
+            if visualize:
+                self.axc.set_xlabel('y \n Target in sight: False', color="red", fontweight='bold')
+        # are all target projection point components within a very small threshold distance from a border and within all other image borders? -> within field of view AND on a border
+        elif np.all(border_dist >= -border_threshold) and np.any(np.abs(border_dist[0:2]) < border_threshold):
+            self.in_sight = True
+            if visualize:
+                self.axc.set_xlabel('y \n Target in sight: Border', color="orange", fontweight='bold')
+        # are all target projection point components within all image borders? -> within field of view
+        else:
+            self.in_sight = True
+            if visualize:
+                self.axc.set_xlabel('y \n Target in sight: True', color="green", fontweight='bold')
+
+    # solves rodriguez axis angle rotation equation for angle given a desired axis and point location (i.e. solution to general form a*cos(ang) + b*sin(ang) + c = 0)
+    def CalculateCriticalAngles(self, v, no_check=False, all=False):
+        ax1 = np.tensordot(self.p_i - np.tensordot(v, self.p_i) * v, self.e1) - np.tensordot(self.cam_lims[0]*(self.p_i - np.tensordot(v, self.p_i) * v), self.e3)
+        ax2 = np.tensordot(self.p_i - np.tensordot(v, self.p_i) * v, self.e1) - np.tensordot(-self.cam_lims[0]*(self.p_i - np.tensordot(v, self.p_i) * v), self.e3)
+        ay1 = np.tensordot(self.p_i - np.tensordot(v, self.p_i) * v, self.e2) - np.tensordot(self.cam_lims[1]*(self.p_i - np.tensordot(v, self.p_i) * v), self.e3)
+        ay2 = np.tensordot(self.p_i - np.tensordot(v, self.p_i) * v, self.e2) - np.tensordot(-self.cam_lims[1]*(self.p_i - np.tensordot(v, self.p_i) * v), self.e3)
+
+        bx1 = np.tensordot(np.cross(v, self.p_i, axis=0), self.e1) - np.tensordot(self.cam_lims[0]*np.cross(v, self.p_i, axis=0), self.e3)
+        bx2 = np.tensordot(np.cross(v, self.p_i, axis=0), self.e1) - np.tensordot(-self.cam_lims[0]*np.cross(v, self.p_i, axis=0), self.e3)
+        by1 = np.tensordot(np.cross(v, self.p_i, axis=0), self.e2) - np.tensordot(self.cam_lims[1]*np.cross(v, self.p_i, axis=0), self.e3)
+        by2 = np.tensordot(np.cross(v, self.p_i, axis=0), self.e2) - np.tensordot(-self.cam_lims[1]*np.cross(v, self.p_i, axis=0), self.e3)
+
+        cx1 = np.tensordot(np.tensordot(v, self.p_i) * v, self.e1) - np.tensordot(self.cam_lims[0]*np.tensordot(v, self.p_i) * v, self.e3)
+        cx2 = np.tensordot(np.tensordot(v, self.p_i) * v, self.e1) - np.tensordot(-self.cam_lims[0]*np.tensordot(v, self.p_i) * v, self.e3)
+        cy1 = np.tensordot(np.tensordot(v, self.p_i) * v, self.e2) - np.tensordot(self.cam_lims[1]*np.tensordot(v, self.p_i) * v, self.e3)
+        cy2 = np.tensordot(np.tensordot(v, self.p_i) * v, self.e2) - np.tensordot(-self.cam_lims[1]*np.tensordot(v, self.p_i) * v, self.e3)
+
+        # stack all possible solutions for critical angles on each image edge
+        angx1 = np.array([])
+        angx2 = np.array([])
+        angy1 = np.array([])
+        angy2 = np.array([])
+
+        angx1 = np.hstack((angx1, np.arcsin(-cx1/np.sqrt(ax1**2 + bx1**2)) - np.arcsin(ax1/np.sqrt(ax1**2 + bx1**2))))
+        angx2 = np.hstack((angx2, np.arcsin(-cx2/np.sqrt(ax2**2 + bx2**2)) - np.arcsin(ax2/np.sqrt(ax2**2 + bx2**2))))
+        angy1 = np.hstack((angy1, np.arcsin(-cy1/np.sqrt(ay1**2 + by1**2)) - np.arcsin(ay1/np.sqrt(ay1**2 + by1**2))))
+        angy2 = np.hstack((angy2, np.arcsin(-cy2/np.sqrt(ay2**2 + by2**2)) - np.arcsin(ay2/np.sqrt(ay2**2 + by2**2))))
+
+        angx1 = np.hstack((angx1, -np.arcsin(-cx1 / np.sqrt(ax1 ** 2 + bx1 ** 2)) - np.arcsin(ax1 / np.sqrt(ax1 ** 2 + bx1 ** 2))))
+        angx2 = np.hstack((angx2, -np.arcsin(-cx2 / np.sqrt(ax2 ** 2 + bx2 ** 2)) - np.arcsin(ax2 / np.sqrt(ax2 ** 2 + bx2 ** 2))))
+        angy1 = np.hstack((angy1, -np.arcsin(-cy1 / np.sqrt(ay1 ** 2 + by1 ** 2)) - np.arcsin(ay1 / np.sqrt(ay1 ** 2 + by1 ** 2))))
+        angy2 = np.hstack((angy2, -np.arcsin(-cy2 / np.sqrt(ay2 ** 2 + by2 ** 2)) - np.arcsin(ay2 / np.sqrt(ay2 ** 2 + by2 ** 2))))
+
+        angx1 = np.hstack((angx1, -angx1[0]))
+        angx2 = np.hstack((angx2, -angx2[0]))
+        angy1 = np.hstack((angy1, -angy1[0]))
+        angy2 = np.hstack((angy2, -angy2[0]))
+
+        angx1 = np.hstack((angx1, -angx1[1]))
+        angx2 = np.hstack((angx2, -angx2[1]))
+        angy1 = np.hstack((angy1, -angy1[1]))
+        angy2 = np.hstack((angy2, -angy2[1]))
+
+        angx1pp = angx1 + np.pi
+        angx2pp = angx2 + np.pi
+        angy1pp = angy1 + np.pi
+        angy2pp = angy2 + np.pi
+
+        angx1mp = angx1 - np.pi
+        angx2mp = angx2 - np.pi
+        angy1mp = angy1 - np.pi
+        angy2mp = angy2 - np.pi
+
+        angx1 = np.hstack((angx1, angx1pp))
+        angx2 = np.hstack((angx2, angx2pp))
+        angy1 = np.hstack((angy1, angy1pp))
+        angy2 = np.hstack((angy2, angy2pp))
+
+        angx1 = np.hstack((angx1, angx1mp))
+        angx2 = np.hstack((angx2, angx2mp))
+        angy1 = np.hstack((angy1, angy1mp))
+        angy2 = np.hstack((angy2, angy2mp))
+
+        if no_check:  # used for returning values of positive angles without assessment of negative angles
+            if self.in_sight:
+                ang1 = angy1[0]
+                ang2 = angy2[0]
+                ang3 = angx1[0]
+                ang4 = angx2[0]
+            else:
+                ang1 = np.nan
+                ang2 = np.nan
+                ang3 = np.nan
+                ang4 = np.nan
+        else:  # assess result of positive and negative angles to see which results in a rotation constraint of 0 when applied
+            cangx1 = np.zeros(len(angx1))
+            cangx2 = np.zeros(len(angx1))
+            cangy1 = np.zeros(len(angx1))
+            cangy2 = np.zeros(len(angx1))
+            for i in range(len(angx1)):
+                self.UpdatePertR(self.axis_angle_to_R(v, angy1[i]), visualize=False)
+                cangy1[i], _, _, _ = self.CalculateCriticalAngles(v, no_check=True)  # right edge constraint
+                self.UpdatePertR(self.axis_angle_to_R(v, angy2[i]), visualize=False)
+                _, cangy2[i], _, _ = self.CalculateCriticalAngles(v, no_check=True)  # left edge constraint
+                self.UpdatePertR(self.axis_angle_to_R(v, angx1[i]), visualize=False)
+                _, _, cangx1[i], _ = self.CalculateCriticalAngles(v, no_check=True)  # top edge constraint
+                self.UpdatePertR(self.axis_angle_to_R(v, angx2[i]), visualize=False)
+                _, _, _, cangx2[i] = self.CalculateCriticalAngles(v, no_check=True)  # bottom edge constraint
+                self.UpdatePertR(self.axis_angle_to_R(v, 0), visualize=False)
+
+            # save angles whose perturbations result in new perturbation commands close to zero
+            ang1 = np.unique(angy1[(np.abs(cangy1) < 1e-14) * (np.abs(angy1) < np.pi)])
+            ang2 = np.unique(angy2[(np.abs(cangy2) < 1e-14) * (np.abs(angy2) < np.pi)])
+            ang3 = np.unique(angx1[(np.abs(cangx1) < 1e-14) * (np.abs(angx1) < np.pi)])
+            ang4 = np.unique(angx2[(np.abs(cangx2) < 1e-14) * (np.abs(angx2) < np.pi)])
+
+            # determine the two angles whose solutions are closest to the current position (smallest magnitude angles on either side)
+            if not all:
+                angs = np.hstack((ang1, ang2, ang3, ang4))
+                try:
+                    # get largest negative angle
+                    ang1 = np.array([angs[np.where(angs < 0, angs, -np.inf).argmax()]])
+                except:
+                    ang1 = np.array([])
+                try:
+                    # get smallest positive angle
+                    ang2 = np.array([angs[np.where(angs > 0, angs, np.inf).argmin()]])
+                except:
+                    ang2 = np.array([])
+                # only max of two closest angles (one on either side) so others are cleared
+                ang3 = np.array([])
+                ang4 = np.array([])
+            else:
+                pass
+
+        return [ang1, ang2, ang3, ang4]
+
+    # calculates passive rotation matrix from axis angle rotation
+    def axis_angle_to_R(self, ax, ang):
+        R = np.array([[np.cos(ang) + ax[0, 0] ** 2 * (1 - np.cos(ang)),
+                       ax[0, 0] * ax[1, 0] * (1 - np.cos(ang)) - ax[2, 0] * np.sin(ang),
+                       ax[0, 0] * ax[2, 0] * (1 - np.cos(ang)) + ax[1, 0] * np.sin(ang)],
+                      [ax[0, 0] * ax[1, 0] * (1 - np.cos(ang)) + ax[2, 0] * np.sin(ang),
+                       np.cos(ang) + ax[1, 0] ** 2 * (1 - np.cos(ang)),
+                       ax[1, 0] * ax[2, 0] * (1 - np.cos(ang)) - ax[0, 0] * np.sin(ang)],
+                      [ax[0, 0] * ax[2, 0] * (1 - np.cos(ang)) - ax[1, 0] * np.sin(ang),
+                       ax[1, 0] * ax[2, 0] * (1 - np.cos(ang)) + ax[0, 0] * np.sin(ang),
+                       np.cos(ang) + ax[2, 0] ** 2 * (1 - np.cos(ang))]])
+        return R.transpose()  # returns passive transform
 
 
 
