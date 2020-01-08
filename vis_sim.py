@@ -386,6 +386,20 @@ class UAV_simulator:
             if visualize:
                 self.axc.set_xlabel('y \n Target in sight: True', color="green", fontweight='bold')
 
+    # determines distance of target projection on normalized image plane from critical boundaries
+    def CheckBorderDistances(self):
+        if self.in_sight:
+            dr = self.cam_lims[1] - self.p_i[1]
+            dl = -self.cam_lims[1] - self.p_i[1]
+            dt = self.cam_lims[0] - self.p_i[0]
+            db = -self.cam_lims[0] - self.p_i[0]
+        else:
+            dr = np.nan
+            dl = np.nan
+            dt = np.nan
+            db = np.nan
+        return [dr, dl, dt, db]
+
     # solves rodriguez axis angle rotation equation for angle given a desired axis and point location (i.e. solution to general form a*cos(ang) + b*sin(ang) + c = 0)
     def CalculateCriticalAngles(self, v, no_check=False, all=False):
         ax1 = np.tensordot(self.p_i - np.tensordot(v, self.p_i) * v, self.e1) - np.tensordot(self.cam_lims[0]*(self.p_i - np.tensordot(v, self.p_i) * v), self.e3)
@@ -449,61 +463,49 @@ class UAV_simulator:
         angy1 = np.hstack((angy1, angy1mp))
         angy2 = np.hstack((angy2, angy2mp))
 
-        if no_check:  # used for returning values of positive angles without assessment of negative angles
-            if self.in_sight:
-                ang1 = angy1[0]
-                ang2 = angy2[0]
-                ang3 = angx1[0]
-                ang4 = angx2[0]
-            else:
-                ang1 = np.nan
-                ang2 = np.nan
-                ang3 = np.nan
-                ang4 = np.nan
-        else:  # assess result of positive and negative angles to see which results in a rotation constraint of 0 when applied
-            cangx1 = np.zeros(len(angx1))
-            cangx2 = np.zeros(len(angx1))
-            cangy1 = np.zeros(len(angx1))
-            cangy2 = np.zeros(len(angx1))
-            for i in range(len(angx1)):
-                self.UpdatePertR(self.axis_angle_to_R(v, angy1[i]), visualize=False)
-                cangy1[i], _, _, _ = self.CalculateCriticalAngles(v, no_check=True)  # right edge constraint
-                self.UpdatePertR(self.axis_angle_to_R(v, angy2[i]), visualize=False)
-                _, cangy2[i], _, _ = self.CalculateCriticalAngles(v, no_check=True)  # left edge constraint
-                self.UpdatePertR(self.axis_angle_to_R(v, angx1[i]), visualize=False)
-                _, _, cangx1[i], _ = self.CalculateCriticalAngles(v, no_check=True)  # top edge constraint
-                self.UpdatePertR(self.axis_angle_to_R(v, angx2[i]), visualize=False)
-                _, _, _, cangx2[i] = self.CalculateCriticalAngles(v, no_check=True)  # bottom edge constraint
-                self.UpdatePertR(self.axis_angle_to_R(v, 0), visualize=False)
+        cangx1 = np.zeros(len(angx1))
+        cangx2 = np.zeros(len(angx1))
+        cangy1 = np.zeros(len(angx1))
+        cangy2 = np.zeros(len(angx1))
+        for i in range(len(angx1)):
+            self.UpdatePertR(self.axis_angle_to_R(v, angy1[i]), visualize=False)
+            cangy1[i], _, _, _ = self.CheckBorderDistances()  # right edge constraint
+            self.UpdatePertR(self.axis_angle_to_R(v, angy2[i]), visualize=False)
+            _, cangy2[i], _, _ = self.CheckBorderDistances()  # left edge constraint
+            self.UpdatePertR(self.axis_angle_to_R(v, angx1[i]), visualize=False)
+            _, _, cangx1[i], _ = self.CheckBorderDistances()  # top edge constraint
+            self.UpdatePertR(self.axis_angle_to_R(v, angx2[i]), visualize=False)
+            _, _, _, cangx2[i] = self.CheckBorderDistances()  # bottom edge constraint
+            self.UpdatePertR(self.axis_angle_to_R(v, 0), visualize=False)
 
-            # save angles whose perturbations result in new perturbation commands close to zero
-            ang1 = np.unique(angy1[(np.abs(cangy1) < 1e-14) * (np.abs(angy1) < np.pi)])
-            ang2 = np.unique(angy2[(np.abs(cangy2) < 1e-14) * (np.abs(angy2) < np.pi)])
-            ang3 = np.unique(angx1[(np.abs(cangx1) < 1e-14) * (np.abs(angx1) < np.pi)])
-            ang4 = np.unique(angx2[(np.abs(cangx2) < 1e-14) * (np.abs(angx2) < np.pi)])
+        # save angles whose perturbations result in new perturbation commands close to zero
+        ang1 = np.unique(angy1[(np.abs(cangy1) < 1e-14) * (np.abs(angy1) < np.pi)])
+        ang2 = np.unique(angy2[(np.abs(cangy2) < 1e-14) * (np.abs(angy2) < np.pi)])
+        ang3 = np.unique(angx1[(np.abs(cangx1) < 1e-14) * (np.abs(angx1) < np.pi)])
+        ang4 = np.unique(angx2[(np.abs(cangx2) < 1e-14) * (np.abs(angx2) < np.pi)])
 
-            # determine the two angles whose solutions are closest to the current position (smallest magnitude angles on either side)
-            if not all:
-                angs = np.hstack((ang1, ang2, ang3, ang4))
-                print(angs*180/np.pi)
-                try:
-                    # get largest negative angle
-                    ang1 = np.array([angs[np.where(angs < 0, angs, -np.inf).argmax()]])
-                except:
-                    ang1 = np.array([])
-                try:
-                    # get smallest positive angle
-                    ang2 = np.array([angs[np.where(angs > 0, angs, np.inf).argmin()]])
-                except:
-                    ang2 = np.array([])
-                # if angles all have same sign then return both angles
-                if ang1 == ang2:
-                    ang2 = angs[angs != ang1]
-                # only max of two closest angles (one on either side) so others are cleared
-                ang3 = np.array([])
-                ang4 = np.array([])
-            else:
-                pass
+        # determine the two angles whose solutions are closest to the current position (smallest magnitude angles on either side)
+        if not all:
+            angs = np.hstack((ang1, ang2, ang3, ang4))
+            print(angs*180/np.pi)
+            try:
+                # get largest negative angle
+                ang1 = np.array([angs[np.where(angs < 0, angs, -np.inf).argmax()]])
+            except:
+                ang1 = np.array([])
+            try:
+                # get smallest positive angle
+                ang2 = np.array([angs[np.where(angs > 0, angs, np.inf).argmin()]])
+            except:
+                ang2 = np.array([])
+            # if angles all have same sign then return both angles
+            if ang1 == ang2:
+                ang2 = angs[angs != ang1]
+            # only max of two closest angles (one on either side) so others are cleared
+            ang3 = np.array([])
+            ang4 = np.array([])
+        else:
+            pass
 
         return [ang1, ang2, ang3, ang4]
 
