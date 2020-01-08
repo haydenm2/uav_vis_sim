@@ -107,7 +107,7 @@ class UAV_simulator:
 
         # ----------------------- Initialize Camera View Plot -----------------------
 
-        self.cam_lims = (self.R_cfov1_y @ self.R_cfov2_x @ self.e3) / (self.e3.transpose() @ self.R_cfov1_y @ self.R_cfov2_x @ self.e3)
+        self.cam_lims = (self.R_cfov2_y.transpose() @ self.R_cfov1_x.transpose() @ self.e3) / (self.e3.transpose() @ self.R_cfov2_y.transpose() @ self.R_cfov1_x.transpose() @ self.e3)
 
         # Setup plotting base for camera FOV
         self.axc = fig.add_subplot(2, 1, 2)  # plot axis handle
@@ -173,6 +173,7 @@ class UAV_simulator:
         self.h_fov = h_fov
         self.R_cfov1_x = rot3dyp(self.h_fov / 2)
         self.R_cfov2_x = rot3dyp(-self.h_fov / 2)
+        self.cam_lims = (self.R_cfov2_y.transpose() @ self.R_cfov1_x.transpose() @ self.e3) / (self.e3.transpose() @ self.R_cfov2_y.transpose() @ self.R_cfov1_x.transpose() @ self.e3)
         if visualize:
             self.UpdateSim()
         else:
@@ -183,6 +184,7 @@ class UAV_simulator:
         self.v_fov = v_fov
         self.R_cfov1_y = rot3dxp(self.v_fov / 2)
         self.R_cfov2_y = rot3dxp(-self.v_fov / 2)
+        self.cam_lims = (self.R_cfov2_y.transpose() @ self.R_cfov1_x.transpose() @ self.e3) / (self.e3.transpose() @ self.R_cfov2_y.transpose() @ self.R_cfov1_x.transpose() @ self.e3)
         if visualize:
             self.UpdateSim()
         else:
@@ -194,7 +196,6 @@ class UAV_simulator:
         self.R_ic = self.R_gc @ self.R_bg @ self.R_vb @ self.R_iv
         self.P_i = self.R_ic @ (self.xt - self.x)
         self.p_i = self.P_i / (self.e3.transpose() @ self.P_i)  # target point on normalized image plane
-        self.cam_lims = (self.R_cfov2_y.transpose() @ self.R_cfov1_x.transpose() @ self.e3) / (self.e3.transpose() @ self.R_cfov2_y.transpose() @ self.R_cfov1_x.transpose() @ self.e3)
         self.CheckInFOV()
 
         if visualize:
@@ -408,10 +409,10 @@ class UAV_simulator:
         angy1 = np.array([])
         angy2 = np.array([])
 
-        angx1 = np.hstack((angx1, np.arcsin(-cx1/np.sqrt(ax1**2 + bx1**2)) - np.arcsin(ax1/np.sqrt(ax1**2 + bx1**2))))
-        angx2 = np.hstack((angx2, np.arcsin(-cx2/np.sqrt(ax2**2 + bx2**2)) - np.arcsin(ax2/np.sqrt(ax2**2 + bx2**2))))
-        angy1 = np.hstack((angy1, np.arcsin(-cy1/np.sqrt(ay1**2 + by1**2)) - np.arcsin(ay1/np.sqrt(ay1**2 + by1**2))))
-        angy2 = np.hstack((angy2, np.arcsin(-cy2/np.sqrt(ay2**2 + by2**2)) - np.arcsin(ay2/np.sqrt(ay2**2 + by2**2))))
+        angx1 = np.hstack((angx1,  np.arcsin(-cx1 / np.sqrt(ax1 ** 2 + bx1 ** 2)) - np.arcsin(ax1 / np.sqrt(ax1 ** 2 + bx1 ** 2))))
+        angx2 = np.hstack((angx2,  np.arcsin(-cx2 / np.sqrt(ax2 ** 2 + bx2 ** 2)) - np.arcsin(ax2 / np.sqrt(ax2 ** 2 + bx2 ** 2))))
+        angy1 = np.hstack((angy1,  np.arcsin(-cy1 / np.sqrt(ay1 ** 2 + by1 ** 2)) - np.arcsin(ay1 / np.sqrt(ay1 ** 2 + by1 ** 2))))
+        angy2 = np.hstack((angy2,  np.arcsin(-cy2 / np.sqrt(ay2 ** 2 + by2 ** 2)) - np.arcsin(ay2 / np.sqrt(ay2 ** 2 + by2 ** 2))))
 
         angx1 = np.hstack((angx1, -np.arcsin(-cx1 / np.sqrt(ax1 ** 2 + bx1 ** 2)) - np.arcsin(ax1 / np.sqrt(ax1 ** 2 + bx1 ** 2))))
         angx2 = np.hstack((angx2, -np.arcsin(-cx2 / np.sqrt(ax2 ** 2 + bx2 ** 2)) - np.arcsin(ax2 / np.sqrt(ax2 ** 2 + bx2 ** 2))))
