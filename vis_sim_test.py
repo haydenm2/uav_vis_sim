@@ -74,9 +74,9 @@ if __name__ == "__main__":
         # Initialize simulator
         x0 = np.array([[np.random.randint(-20, 20)], [np.random.randint(-20, 20)], [np.random.randint(20, 100)]])
         xt0 = np.array([[np.random.randint(-20, 20)], [np.random.randint(-20, 20)], [np.random.randint(0, 10)]])
-        ypr = np.array([np.deg2rad(np.random.randint(-20, 20)), np.deg2rad(np.random.randint(-20, 20)),
+        ypr = np.array([np.deg2rad(np.random.randint(-90, 90)), np.deg2rad(np.random.randint(-20, 20)),
                         np.deg2rad(np.random.randint(-20, 20))])
-        ypr_g = np.array([np.deg2rad(np.random.randint(-20, 20)), np.deg2rad(np.random.randint(-20, 20)),
+        ypr_g = np.array([np.deg2rad(np.random.randint(-90, 90)), np.deg2rad(np.random.randint(-20, 20)),
                           np.deg2rad(np.random.randint(-20, 20))])
         h_fov = np.deg2rad(np.random.randint(20, 60))
         v_fov = np.deg2rad(np.random.randint(20, 60))

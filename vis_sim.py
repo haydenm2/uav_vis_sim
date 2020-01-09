@@ -417,51 +417,11 @@ class UAV_simulator:
         cy1 = np.tensordot(np.tensordot(v, self.p_i) * v, self.e2) - np.tensordot(self.cam_lims[1]*np.tensordot(v, self.p_i) * v, self.e3)
         cy2 = np.tensordot(np.tensordot(v, self.p_i) * v, self.e2) - np.tensordot(-self.cam_lims[1]*np.tensordot(v, self.p_i) * v, self.e3)
 
-        # stack all possible solutions for critical angles on each image edge
-        angx1 = np.array([])
-        angx2 = np.array([])
-        angy1 = np.array([])
-        angy2 = np.array([])
-
-        angx1 = np.hstack((angx1,  np.arcsin(-cx1 / np.sqrt(ax1 ** 2 + bx1 ** 2)) - np.arcsin(ax1 / np.sqrt(ax1 ** 2 + bx1 ** 2))))
-        angx2 = np.hstack((angx2,  np.arcsin(-cx2 / np.sqrt(ax2 ** 2 + bx2 ** 2)) - np.arcsin(ax2 / np.sqrt(ax2 ** 2 + bx2 ** 2))))
-        angy1 = np.hstack((angy1,  np.arcsin(-cy1 / np.sqrt(ay1 ** 2 + by1 ** 2)) - np.arcsin(ay1 / np.sqrt(ay1 ** 2 + by1 ** 2))))
-        angy2 = np.hstack((angy2,  np.arcsin(-cy2 / np.sqrt(ay2 ** 2 + by2 ** 2)) - np.arcsin(ay2 / np.sqrt(ay2 ** 2 + by2 ** 2))))
-
-        angx1 = np.hstack((angx1, -np.arcsin(-cx1 / np.sqrt(ax1 ** 2 + bx1 ** 2)) - np.arcsin(ax1 / np.sqrt(ax1 ** 2 + bx1 ** 2))))
-        angx2 = np.hstack((angx2, -np.arcsin(-cx2 / np.sqrt(ax2 ** 2 + bx2 ** 2)) - np.arcsin(ax2 / np.sqrt(ax2 ** 2 + bx2 ** 2))))
-        angy1 = np.hstack((angy1, -np.arcsin(-cy1 / np.sqrt(ay1 ** 2 + by1 ** 2)) - np.arcsin(ay1 / np.sqrt(ay1 ** 2 + by1 ** 2))))
-        angy2 = np.hstack((angy2, -np.arcsin(-cy2 / np.sqrt(ay2 ** 2 + by2 ** 2)) - np.arcsin(ay2 / np.sqrt(ay2 ** 2 + by2 ** 2))))
-
-        angx1 = np.hstack((angx1, -angx1[0]))
-        angx2 = np.hstack((angx2, -angx2[0]))
-        angy1 = np.hstack((angy1, -angy1[0]))
-        angy2 = np.hstack((angy2, -angy2[0]))
-
-        angx1 = np.hstack((angx1, -angx1[1]))
-        angx2 = np.hstack((angx2, -angx2[1]))
-        angy1 = np.hstack((angy1, -angy1[1]))
-        angy2 = np.hstack((angy2, -angy2[1]))
-
-        angx1pp = angx1 + np.pi
-        angx2pp = angx2 + np.pi
-        angy1pp = angy1 + np.pi
-        angy2pp = angy2 + np.pi
-
-        angx1mp = angx1 - np.pi
-        angx2mp = angx2 - np.pi
-        angy1mp = angy1 - np.pi
-        angy2mp = angy2 - np.pi
-
-        angx1 = np.hstack((angx1, angx1pp))
-        angx2 = np.hstack((angx2, angx2pp))
-        angy1 = np.hstack((angy1, angy1pp))
-        angy2 = np.hstack((angy2, angy2pp))
-
-        angx1 = np.hstack((angx1, angx1mp))
-        angx2 = np.hstack((angx2, angx2mp))
-        angy1 = np.hstack((angy1, angy1mp))
-        angy2 = np.hstack((angy2, angy2mp))
+        # stack possible solutions for critical angles on each image edge
+        angy1 = -self.Wrap(np.array((2*np.arctan2((-(-2 * by1) + np.sqrt((-2 * by1)**2 - 4*(-cy1 + ay1)*(-cy1 - ay1))), (2*(-cy1 + ay1))), 2*np.arctan2((-(-2 * by1) - np.sqrt((-2 * by1)**2 - 4*(-cy1 + ay1)*(-cy1 - ay1))), (2*(-cy1 + ay1))))))
+        angy2 = -self.Wrap(np.array((2*np.arctan2((-(-2 * by2) + np.sqrt((-2 * by2)**2 - 4*(-cy2 + ay2)*(-cy2 - ay2))), (2*(-cy2 + ay2))), 2*np.arctan2((-(-2 * by2) - np.sqrt((-2 * by2)**2 - 4*(-cy2 + ay2)*(-cy2 - ay2))), (2*(-cy2 + ay2))))))
+        angx1 = -self.Wrap(np.array((2*np.arctan2((-(-2 * bx1) + np.sqrt((-2 * bx1)**2 - 4*(-cx1 + ax1)*(-cx1 - ax1))), (2*(-cx1 + ax1))), 2*np.arctan2((-(-2 * bx1) - np.sqrt((-2 * bx1)**2 - 4*(-cx1 + ax1)*(-cx1 - ax1))), (2*(-cx1 + ax1))))))
+        angx2 = -self.Wrap(np.array((2*np.arctan2((-(-2 * bx2) + np.sqrt((-2 * bx2)**2 - 4*(-cx2 + ax2)*(-cx2 - ax2))), (2*(-cx2 + ax2))), 2*np.arctan2((-(-2 * bx2) - np.sqrt((-2 * bx2)**2 - 4*(-cx2 + ax2)*(-cx2 - ax2))), (2*(-cx2 + ax2))))))
 
         cangx1 = np.zeros(len(angx1))
         cangx2 = np.zeros(len(angx1))
@@ -479,15 +439,14 @@ class UAV_simulator:
             self.UpdatePertR(self.axis_angle_to_R(v, 0), visualize=False)
 
         # save angles whose perturbations result in new perturbation commands close to zero
-        ang1 = np.unique(angy1[(np.abs(cangy1) < 1e-14) * (np.abs(angy1) < np.pi)])
-        ang2 = np.unique(angy2[(np.abs(cangy2) < 1e-14) * (np.abs(angy2) < np.pi)])
-        ang3 = np.unique(angx1[(np.abs(cangx1) < 1e-14) * (np.abs(angx1) < np.pi)])
-        ang4 = np.unique(angx2[(np.abs(cangx2) < 1e-14) * (np.abs(angx2) < np.pi)])
+        ang1 = angy1[(np.abs(cangy1) < 1e-10) * (np.abs(angy1) < np.pi)]
+        ang2 = angy2[(np.abs(cangy2) < 1e-10) * (np.abs(angy2) < np.pi)]
+        ang3 = angx1[(np.abs(cangx1) < 1e-10) * (np.abs(angx1) < np.pi)]
+        ang4 = angx2[(np.abs(cangx2) < 1e-10) * (np.abs(angx2) < np.pi)]
 
         # determine the two angles whose solutions are closest to the current position (smallest magnitude angles on either side)
         if not all:
             angs = np.hstack((ang1, ang2, ang3, ang4))
-            print(angs*180/np.pi)
             try:
                 # get largest negative angle
                 ang1 = np.array([angs[np.where(angs < 0, angs, -np.inf).argmax()]])
@@ -521,6 +480,18 @@ class UAV_simulator:
                        ax[1, 0] * ax[2, 0] * (1 - np.cos(ang)) + ax[0, 0] * np.sin(ang),
                        np.cos(ang) + ax[2, 0] ** 2 * (1 - np.cos(ang))]])
         return R.transpose()  # returns passive transform
+
+    def Wrap(self, th):
+        if type(th) is np.ndarray:
+            th_wrap = np.fmod(th + np.pi, 2 * np.pi)
+            for i in range(len(th_wrap)):
+                if th_wrap[i] < 0:
+                    th_wrap[i] += 2 * np.pi
+        else:
+            th_wrap = np.fmod(th + np.pi, 2 * np.pi)
+            if th_wrap < 0:
+                th_wrap += 2 * np.pi
+        return th_wrap - np.pi
 
 
 
