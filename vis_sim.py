@@ -58,27 +58,27 @@ class UAV_simulator:
         self.R_cfov2_x = rot3dyp(-self.h_fov / 2)      # rotation matrix from camera to min x field of view frame
         self.R_cfov1_y = rot3dxp(self.v_fov / 2)      # rotation matrix from camera to max y field of view frame
         self.R_cfov2_y = rot3dxp(-self.v_fov / 2)      # rotation matrix from camera to min y field of view frame
-        self.R_ic = self.R_gc @ self.R_bg @ self.R_vb @ self.R_iv
+        self.R_ic = self.R_perturb @ self.R_gc @ self.R_bg @ self.R_vb @ self.R_iv
 
         # Rotate animation lines and points back out to common inertial frame for plotting
         llos = np.hstack([self.x, self.xt])     # line of sight vector
         lx = np.hstack((np.zeros((3, 1)), self.e1))*self.x_line_scale
         lquiv = np.hstack((np.zeros((3, 1)), self.e1)) * self.uav_length
         lquiv = self.R_iv.transpose() @ self.R_vb.transpose() @ lquiv + self.x      # transformed UAV heading arrow
-        lcamx = self.R_iv.transpose() @ self.R_vb.transpose() @ self.R_bg.transpose() @ self.R_gc.transpose() @ lx + self.x      # transformed camera x-axis line
+        lcamx = self.R_iv.transpose() @ self.R_vb.transpose() @ self.R_bg.transpose() @ self.R_gc.transpose() @ self.R_perturb.transpose() @ lx + self.x      # transformed camera x-axis line
         lbNorth = self.R_iv.transpose() @ lx + self.x      # transformed North heading line
         L = np.hstack((self.R_cfov1_y.transpose() @ self.R_cfov1_x.transpose() @ self.e3,
                        self.R_cfov2_y.transpose() @ self.R_cfov1_x.transpose() @ self.e3,
                        self.R_cfov2_y.transpose() @ self.R_cfov2_x.transpose() @ self.e3,
                        self.R_cfov1_y.transpose() @ self.R_cfov2_x.transpose() @ self.e3))       # field of view corner lines
-        L_v = self.R_vb.transpose() @ self.R_bg.transpose() @ self.R_gc.transpose() @ L                # field of view corner lines in vehicle frame
+        L_v = self.R_vb.transpose() @ self.R_bg.transpose() @ self.R_gc.transpose() @ self.R_perturb.transpose() @ L                # field of view corner lines in vehicle frame
         pts = self.R_iv @ (self.x[2] * L_v @ np.linalg.inv(np.diag((self.e3.transpose() @ L_v)[0]))) + self.x     # field of view corners projected on observation plane
         lfov1 = np.hstack((self.x, pts[:, 0].reshape(-1, 1)))       # field of view corner line 1
         lfov2 = np.hstack((self.x, pts[:, 1].reshape(-1, 1)))       # field of view corner line 2
         lfov3 = np.hstack((self.x, pts[:, 2].reshape(-1, 1)))       # field of view corner line 3
         lfov4 = np.hstack((self.x, pts[:, 3].reshape(-1, 1)))       # field of view corner line 4
 
-        l_temp = self.R_vb.transpose() @ self.R_bg.transpose() @ self.R_gc.transpose() @ self.e3
+        l_temp = self.R_vb.transpose() @ self.R_bg.transpose() @ self.R_gc.transpose() @ self.R_perturb.transpose() @ self.e3
         pts_temp = self.R_iv @ (self.x[2] * l_temp @ np.linalg.inv(np.diag((self.e3.transpose() @ l_temp)[0]))) + self.x
         loptax = np.hstack((self.x, pts_temp.reshape(-1, 1)))       # optical axis line
 
@@ -162,7 +162,6 @@ class UAV_simulator:
     # applies general perturbation to UAV camera view orientation
     def UpdatePertR(self, R, visualize=True):
         self.R_perturb = R
-        self.R_bg = self.R_perturb @ rot3dxp(self.ypr_g[2]) @ rot3dyp(self.ypr_g[1]) @ rot3dzp(self.ypr_g[0])
         if visualize:
             self.UpdateSim()
         else:
@@ -193,7 +192,7 @@ class UAV_simulator:
     # updates states and simulation
     def UpdateSim(self, visualize=True):
         # ----------------------- State Updates -----------------------
-        self.R_ic = self.R_gc @ self.R_bg @ self.R_vb @ self.R_iv
+        self.R_ic = self.R_perturb @ self.R_gc @ self.R_bg @ self.R_vb @ self.R_iv
         self.P_i = self.R_ic @ (self.xt - self.x)
         self.p_i = self.P_i / (self.e3.transpose() @ self.P_i)  # target point on normalized image plane
         self.CheckInFOV()
@@ -206,13 +205,13 @@ class UAV_simulator:
             lx = np.hstack((np.zeros((3, 1)), self.e1))*self.x_line_scale
             lquiv = np.hstack((np.zeros((3, 1)), self.e1)) * self.uav_length
             lquiv = self.R_iv.transpose() @ self.R_vb.transpose() @ lquiv + self.x  # transformed UAV heading arrow
-            lcamx = self.R_iv.transpose() @ self.R_vb.transpose() @ self.R_bg.transpose() @ self.R_gc.transpose() @ lx + self.x  # transformed camera x-axis line
+            lcamx = self.R_iv.transpose() @ self.R_vb.transpose() @ self.R_bg.transpose() @ self.R_gc.transpose() @ self.R_perturb.transpose() @ lx + self.x  # transformed camera x-axis line
             lbNorth = self.R_iv.transpose() @ lx + self.x  # transformed North heading line
             L = np.hstack((self.R_cfov1_y.transpose() @ self.R_cfov1_x.transpose() @ self.e3,
                            self.R_cfov2_y.transpose() @ self.R_cfov1_x.transpose() @ self.e3,
                            self.R_cfov2_y.transpose() @ self.R_cfov2_x.transpose() @ self.e3,
                            self.R_cfov1_y.transpose() @ self.R_cfov2_x.transpose() @ self.e3))  # field of view corner lines
-            L_v = self.R_vb.transpose() @ self.R_bg.transpose() @ self.R_gc.transpose() @ L  # field of view corner lines in vehicle frame
+            L_v = self.R_vb.transpose() @ self.R_bg.transpose() @ self.R_gc.transpose() @ self.R_perturb.transpose() @ L  # field of view corner lines in vehicle frame
             pts = self.R_iv @ (self.x[2] * L_v @ np.linalg.inv(np.diag((self.e3.transpose() @ L_v)[0]))) + self.x  # field of view corners projected on observation plane
             plpts = np.hstack((pts, pts[:, 0].reshape(-1, 1)))  # field of view extent points (with redundant final point)
             lfov1 = np.hstack((self.x, pts[:, 0].reshape(-1, 1)))  # field of view corner line 1
@@ -220,7 +219,7 @@ class UAV_simulator:
             lfov3 = np.hstack((self.x, pts[:, 2].reshape(-1, 1)))  # field of view corner line 3
             lfov4 = np.hstack((self.x, pts[:, 3].reshape(-1, 1)))  # field of view corner line 4
 
-            l_temp = self.R_vb.transpose() @ self.R_bg.transpose() @ self.R_gc.transpose() @ self.e3
+            l_temp = self.R_vb.transpose() @ self.R_bg.transpose() @ self.R_gc.transpose() @ self.R_perturb.transpose() @ self.e3
             pts_temp = self.R_iv @ (self.x[2] * l_temp @ np.linalg.inv(np.diag((self.e3.transpose() @ l_temp)[0]))) + self.x  # optical axis line points on observation plane
             loptax = np.hstack((self.x, pts_temp.reshape(-1, 1)))  # optical axis line
 
@@ -300,7 +299,7 @@ class UAV_simulator:
         points = scale * points
 
         # transform points
-        points = self.R_iv.transpose() @ self.R_vb.transpose() @ self.R_bg.transpose() @ self.R_perturb.transpose() @ self.R_bg @ points + self.x
+        points = self.R_iv.transpose() @ self.R_vb.transpose() @ self.R_bg.transpose() @ self.R_gc.transpose() @ self.R_perturb.transpose() @ self.R_gc @ self.R_bg @ points + self.x
 
         #   define the colors for each face of triangular mesh
         red = np.array([1., 0., 0., 1])
@@ -351,7 +350,7 @@ class UAV_simulator:
                 self.collection[i].set_verts([list(zip(mesh[i, :, 0], mesh[i, :, 1], mesh[i, :, 2]))])
 
         # update body frame z-axis vector plot
-        l_temp = self.R_vb.transpose() @ self.R_bg.transpose() @ self.R_perturb.transpose() @ self.R_bg @ self.e3
+        l_temp = self.R_vb.transpose() @ self.R_bg.transpose() @ self.R_gc.transpose() @ self.R_perturb.transpose() @ self.R_gc @ self.R_bg @ self.e3
         pts_temp = self.R_iv @ (self.x[2] * l_temp @ np.linalg.inv(np.diag((self.e3.transpose() @ l_temp)[0]))) + self.x  # body z-axis line points on observation plane
         lbz = np.hstack((self.x, pts_temp.reshape(-1, 1)))  # z-axis body frame line
         self.plbz[0].set_data_3d(lbz[0, :], lbz[1, :], lbz[2, :])  # plot z-axis body frame line
@@ -418,10 +417,10 @@ class UAV_simulator:
         cy2 = np.tensordot(np.tensordot(v, self.p_i) * v, self.e2) - np.tensordot(-self.cam_lims[1]*np.tensordot(v, self.p_i) * v, self.e3)
 
         # stack possible solutions for critical angles on each image edge
-        angy1 = -self.Wrap(np.array((2*np.arctan2((-(-2 * by1) + np.sqrt((-2 * by1)**2 - 4*(-cy1 + ay1)*(-cy1 - ay1))), (2*(-cy1 + ay1))), 2*np.arctan2((-(-2 * by1) - np.sqrt((-2 * by1)**2 - 4*(-cy1 + ay1)*(-cy1 - ay1))), (2*(-cy1 + ay1))))))
-        angy2 = -self.Wrap(np.array((2*np.arctan2((-(-2 * by2) + np.sqrt((-2 * by2)**2 - 4*(-cy2 + ay2)*(-cy2 - ay2))), (2*(-cy2 + ay2))), 2*np.arctan2((-(-2 * by2) - np.sqrt((-2 * by2)**2 - 4*(-cy2 + ay2)*(-cy2 - ay2))), (2*(-cy2 + ay2))))))
-        angx1 = -self.Wrap(np.array((2*np.arctan2((-(-2 * bx1) + np.sqrt((-2 * bx1)**2 - 4*(-cx1 + ax1)*(-cx1 - ax1))), (2*(-cx1 + ax1))), 2*np.arctan2((-(-2 * bx1) - np.sqrt((-2 * bx1)**2 - 4*(-cx1 + ax1)*(-cx1 - ax1))), (2*(-cx1 + ax1))))))
-        angx2 = -self.Wrap(np.array((2*np.arctan2((-(-2 * bx2) + np.sqrt((-2 * bx2)**2 - 4*(-cx2 + ax2)*(-cx2 - ax2))), (2*(-cx2 + ax2))), 2*np.arctan2((-(-2 * bx2) - np.sqrt((-2 * bx2)**2 - 4*(-cx2 + ax2)*(-cx2 - ax2))), (2*(-cx2 + ax2))))))
+        angy1 = -self.Wrap(np.array((2*np.arctan2((-by1 + np.sqrt(ay1**2 + by1**2 - cy1**2)), (cy1 - ay1)), 2*np.arctan2((-by1 - np.sqrt(ay1**2 + by1**2 - cy1**2)), (cy1 - ay1)))))
+        angy2 = -self.Wrap(np.array((2*np.arctan2((-by2 + np.sqrt(ay2**2 + by2**2 - cy2**2)), (cy2 - ay2)), 2*np.arctan2((-by2 - np.sqrt(ay2**2 + by2**2 - cy2**2)), (cy2 - ay2)))))
+        angx1 = -self.Wrap(np.array((2*np.arctan2((-bx1 + np.sqrt(ax1**2 + bx1**2 - cx1**2)), (cx1 - ax1)), 2*np.arctan2((-bx1 - np.sqrt(ax1**2 + bx1**2 - cx1**2)), (cx1 - ax1)))))
+        angx2 = -self.Wrap(np.array((2*np.arctan2((-bx2 + np.sqrt(ax2**2 + bx2**2 - cx2**2)), (cx2 - ax2)), 2*np.arctan2((-bx2 - np.sqrt(ax2**2 + bx2**2 - cx2**2)), (cx2 - ax2)))))
 
         cangx1 = np.zeros(len(angx1))
         cangx2 = np.zeros(len(angx1))
@@ -439,10 +438,10 @@ class UAV_simulator:
             self.UpdatePertR(self.axis_angle_to_R(v, 0), visualize=False)
 
         # save angles whose perturbations result in new perturbation commands close to zero
-        ang1 = angy1[(np.abs(cangy1) < 1e-10) * (np.abs(angy1) < np.pi)]
-        ang2 = angy2[(np.abs(cangy2) < 1e-10) * (np.abs(angy2) < np.pi)]
-        ang3 = angx1[(np.abs(cangx1) < 1e-10) * (np.abs(angx1) < np.pi)]
-        ang4 = angx2[(np.abs(cangx2) < 1e-10) * (np.abs(angx2) < np.pi)]
+        ang1 = angy1[(np.abs(cangy1) < 1e-10)]
+        ang2 = angy2[(np.abs(cangy2) < 1e-10)]
+        ang3 = angx1[(np.abs(cangx1) < 1e-10)]
+        ang4 = angx2[(np.abs(cangx2) < 1e-10)]
 
         # determine the two angles whose solutions are closest to the current position (smallest magnitude angles on either side)
         if not all:
