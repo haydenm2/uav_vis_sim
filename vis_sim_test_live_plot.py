@@ -34,30 +34,28 @@ def sub_vstack2(a):
     return b
 
 def zone_plot(in_sight, t, pts, bounds=180):
-    if len(pts[pts!=np.inf]) > 2:
-        test = 1
     pts2 = np.vstack([np.array([-bounds]), pts, np.array([bounds])])
     f_pts = pts2[pts2 != np.inf]
     mid_ind = len(f_pts[f_pts < 0])
     if in_sight:
         if np.mod(mid_ind, 2):  #odd middle index
-            for i in range(int((len(f_pts)-1)/2)): # counting every other space between points
+            for i in range(int((len(f_pts)-1)/2) + 1): # counting every other space between points
                 if 2*i+1 == mid_ind:
                     plt.plot(np.array([t, t]), np.array([f_pts[2*i], f_pts[2*i+1]]), 'b')
                 else:
                     plt.plot(np.array([t, t]), np.array([f_pts[2*i], f_pts[2*i+1]]), 'r')
         else: #even middle index
-            for ii in range(int((len(f_pts)-1)/2)-1):
+            for ii in range(int((len(f_pts)-1)/2)):
                 if 2*(ii+1) == mid_ind:
                     plt.plot(np.array([t, t]), np.array([f_pts[2*(ii+1)-1], f_pts[2*(ii+1)]]), 'b')
                 else:
                     plt.plot(np.array([t, t]), np.array([f_pts[2*(ii+1)-1], f_pts[2*(ii+1)]]), 'r')
     else:
         if np.mod(mid_ind, 2):  # odd middle index
-            for iii in range(int((len(f_pts) - 1) / 2) - 1):
+            for iii in range(int((len(f_pts) - 1) / 2)):
                 plt.plot(np.array([t, t]), np.array([f_pts[2 * (iii + 1) - 1], f_pts[2 * (iii + 1)]]), 'r')
         else:  # even middle index
-            for iiii in range(int((len(f_pts) - 1) / 2)):  # counting every other space between points
+            for iiii in range(int((len(f_pts) - 1) / 2) + 1):  # counting every other space between points
                 plt.plot(np.array([t, t]), np.array([f_pts[2 * iiii], f_pts[2 * iiii + 1]]), 'r')  #TODO: maybe skipping last set??
 
 
