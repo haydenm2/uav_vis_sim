@@ -3,8 +3,8 @@
 from vis_sim import UAV_simulator
 import numpy as np
 import matplotlib.pyplot as plt
-import time
 
+# stack and resize with zeros to new array
 def sub_vstack(a):
     if len(a[0]) == 0:
         b = np.array([0.0])
@@ -17,6 +17,7 @@ def sub_vstack(a):
             b = np.vstack([b, np.array([0.0])])
     return b
 
+# stack and resize with zeros to new array for 2d inputs (used for yaw stacking)
 def sub_vstack2(a):
     if len(a[0]) == 0:
         b = np.array([[0.0], [0.0]])
@@ -33,6 +34,7 @@ def sub_vstack2(a):
             b = np.vstack([b, i.reshape(-1, 1)])
     return b
 
+# plot different visibility region charts given multiple edge points (resulting in multiple visibility zones)
 def zone_plot(in_sight, t, pts, bounds=180):
     pts2 = np.vstack([np.array([-bounds]), pts, np.array([bounds])])
     f_pts = pts2[pts2 != np.inf]
@@ -56,7 +58,7 @@ def zone_plot(in_sight, t, pts, bounds=180):
                 plt.plot(np.array([t, t]), np.array([f_pts[2 * (iii + 1) - 1], f_pts[2 * (iii + 1)]]), 'r')
         else:  # even middle index
             for iiii in range(int((len(f_pts) - 1) / 2) + 1):  # counting every other space between points
-                plt.plot(np.array([t, t]), np.array([f_pts[2 * iiii], f_pts[2 * iiii + 1]]), 'r')  #TODO: maybe skipping last set??
+                plt.plot(np.array([t, t]), np.array([f_pts[2 * iiii], f_pts[2 * iiii + 1]]), 'r')
 
 
 
@@ -78,7 +80,7 @@ if __name__ == "__main__":
     all_constraints = False             # toggle to return all critical angle constraint solutions or just the closest on either side of the current orientation
 
     # Initialize simulator
-    x0 = np.array([[np.random.randint(-20, 20)], [np.random.randint(-20, 20)], [np.random.randint(20, 100)]])
+    x0 = np.array([[np.random.randint(-20, 20)], [np.random.randint(-20, 20)], [np.random.randint(60, 100)]])
     xt0 = np.array([[np.random.randint(-20, 20)], [np.random.randint(-20, 20)], [np.random.randint(0, 10)]])
     ypr0 = np.array([np.deg2rad(np.random.randint(-90, 90)), np.deg2rad(np.random.randint(-20, 20)),
                     np.deg2rad(np.random.randint(-20, 20))])
@@ -186,6 +188,12 @@ if __name__ == "__main__":
     _a5 *= 180.0/np.pi
     _a6 *= 180.0/np.pi
 
+    # return to original UAV state for visualization accuracy
+    sim.UpdateX(x0, visualize=show_sim)
+    sim.UpdateTargetX(xt0, visualize=show_sim)
+    sim.UpdateYPR(ypr0, visualize=show_sim)
+    sim.UpdateGimbalYPR(ypr_g0, visualize=show_sim)
+
     ########################### Plot critical boundaries over time #########################
 
 
@@ -206,10 +214,6 @@ if __name__ == "__main__":
     plt.plot(np.array([0.0, 0.0]), np.array([0.0, 0.0]), 'r')  # dummy for legend
     for j in range(len(_a1[0])):
         zone_plot(_in_sight[j], _t[j], _a1[:, j].reshape(-1, 1))
-    #     if _in_sight[j]:
-    #         plt.plot(np.array([_t[j], _t[j]]), np.array([_a1[0, j], _a1[1, j]]), 'b')
-    #     else:
-    #         plt.plot(np.array([_t[j], _t[j]]), np.array([_a1[0, j], _a1[1, j]]), 'r')
     plt.plot(_t, z_line, 'k--')
     plt.plot(_t, u_line, 'k-')
     plt.plot(_t, l_line, 'k-')
@@ -224,10 +228,6 @@ if __name__ == "__main__":
         plt.subplot(323)
     for j in range(len(_a2[0])):
         zone_plot(_in_sight[j], _t[j], _a2[:, j].reshape(-1, 1))
-        # if _in_sight[j]:
-        #     plt.plot(np.array([_t[j], _t[j]]), np.array([_a2[0, j], _a2[1, j]]), 'b')
-        # else:
-        #     plt.plot(np.array([_t[j], _t[j]]), np.array([_a2[0, j], _a2[1, j]]), 'r')
     plt.plot(_t, z_line, 'k--')
     plt.plot(_t, u_line, 'k-')
     plt.plot(_t, l_line, 'k-')
@@ -241,21 +241,6 @@ if __name__ == "__main__":
         plt.subplot(325)
     for j in range(len(_a3[0])):
         zone_plot(_in_sight[j], _t[j], _a3[:, j].reshape(-1, 1))
-        # if _in_sight[j]:
-        #     if _a3[0, j] == 0 and _a3[1, j] == 0:
-        #         plt.plot(np.array([_t[j], _t[j]]), np.array([-180.0, 180.0]), 'b')
-        #         continue
-        #     if _a3[0, j]/_a3[1, j] > 0:  # wrapping bound angles
-        #         plt.plot(np.array([_t[j], _t[j]]), np.array([np.minimum(_a3[0, j], _a3[1, j]), -180.0]), 'b')
-        #         plt.plot(np.array([_t[j], _t[j]]), np.array([np.maximum(_a3[0, j], _a3[1, j]), 180.0]), 'b')
-        #     else:
-        #         plt.plot(np.array([_t[j], _t[j]]), np.array([_a3[0, j], _a3[1, j]]), 'b')
-        # else:
-        #     if np.minimum(_a3[0, j], _a3[1, j]) < 0 and np.maximum(_a3[0, j], _a3[1, j]) > 0:  # wrapping bound angles
-        #         plt.plot(np.array([_t[j], _t[j]]), np.array([np.minimum(_a3[0, j], _a3[1, j]), -180.0]), 'r')
-        #         plt.plot(np.array([_t[j], _t[j]]), np.array([np.maximum(_a3[0, j], _a3[1, j]), 180.0]), 'r')
-        #     else:
-        #         plt.plot(np.array([_t[j], _t[j]]), np.array([_a3[0, j], _a3[1, j]]), 'r')
     plt.plot(_t, z_line, 'k--')
     plt.plot(_t, u_line, 'k-')
     plt.plot(_t, l_line, 'k-')
@@ -277,10 +262,6 @@ if __name__ == "__main__":
         plt.subplot(322)
     for j in range(len(_a4[0])):
         zone_plot(_in_sight[j], _t[j], _a4[:, j].reshape(-1, 1))
-        # if _in_sight[j]:
-        #     plt.plot(np.array([_t[j], _t[j]]), np.array([_a4[0, j], _a4[1, j]]), 'b')
-        # else:
-        #     plt.plot(np.array([_t[j], _t[j]]), np.array([_a4[0, j], _a4[1, j]]), 'r')
     plt.plot(_t, z_line, 'k--')
     plt.plot(_t, u_line, 'k-')
     plt.plot(_t, l_line, 'k-')
@@ -294,10 +275,6 @@ if __name__ == "__main__":
         plt.subplot(324)
     for j in range(len(_a5[0])):
         zone_plot(_in_sight[j], _t[j], _a5[:, j].reshape(-1, 1))
-        # if _in_sight[j]:
-        #     plt.plot(np.array([_t[j], _t[j]]), np.array([_a5[0, j], _a5[1, j]]), 'b')
-        # else:
-        #     plt.plot(np.array([_t[j], _t[j]]), np.array([_a5[0, j], _a5[1, j]]), 'r')
     plt.plot(_t, z_line, 'k--')
     plt.plot(_t, u_line, 'k-')
     plt.plot(_t, l_line, 'k-')
@@ -311,21 +288,6 @@ if __name__ == "__main__":
         plt.subplot(326)
     for j in range(len(_a6[0])):
         zone_plot(_in_sight[j], _t[j], _a6[:, j].reshape(-1, 1))
-        # if _in_sight[j]:
-        #     if _a6[0, j] == 0 and _a6[1, j] == 0:
-        #         plt.plot(np.array([_t[j], _t[j]]), np.array([-180.0, 180.0]), 'b')
-        #         continue
-        #     if _a6[0, j]/_a6[1, j] > 0:  # wrapping bound angles
-        #         plt.plot(np.array([_t[j], _t[j]]), np.array([np.minimum(_a6[0, j], _a6[1, j]), -180.0]), 'b')
-        #         plt.plot(np.array([_t[j], _t[j]]), np.array([np.maximum(_a6[0, j], _a6[1, j]), 180.0]), 'b')
-        #     else:
-        #         plt.plot(np.array([_t[j], _t[j]]), np.array([_a6[0, j], _a6[1, j]]), 'b')
-        # else:
-        #     if np.minimum(_a6[0, j], _a6[1, j]) < 0 and np.maximum(_a6[0, j], _a6[1, j]) > 0:  # wrapping bound angles
-        #         plt.plot(np.array([_t[j], _t[j]]), np.array([np.minimum(_a6[0, j], _a6[1, j]), -180.0]), 'r')
-        #         plt.plot(np.array([_t[j], _t[j]]), np.array([np.maximum(_a6[0, j], _a6[1, j]), 180.0]), 'r')
-        #     else:
-        #         plt.plot(np.array([_t[j], _t[j]]), np.array([_a6[0, j], _a6[1, j]]), 'r')
     plt.plot(_t, z_line, 'k--')
     plt.plot(_t, u_line, 'k-')
     plt.plot(_t, l_line, 'k-')

@@ -35,6 +35,7 @@ class UAV_simulator:
         plt_range = 100
         self.in_sight = False
         self.show_north = False
+        self.show_z = False
 
         # ----------------------- Initialize 3D Simulation Plot -----------------------
 
@@ -64,8 +65,6 @@ class UAV_simulator:
         # Rotate animation lines and points back out to common inertial frame for plotting
         llos = np.hstack([self.x, self.xt])     # line of sight vector
         lx = np.hstack((np.zeros((3, 1)), self.e1))*self.x_line_scale
-        # lquiv = np.hstack((np.zeros((3, 1)), self.e1)) * self.uav_length
-        # lquiv = self.R_iv.transpose() @ self.R_vb.transpose() @ lquiv + self.x      # transformed UAV heading arrow
         lcamx = self.R_iv.transpose() @ self.R_vb.transpose() @ self.R_bg.transpose() @ self.R_gc.transpose() @ self.R_perturb.transpose() @ lx + self.x      # transformed camera x-axis line
         if self.show_north:
             lbNorth = self.R_iv.transpose() @ lx + self.x      # transformed North heading line
@@ -86,7 +85,8 @@ class UAV_simulator:
 
         l_temp = self.R_vb.transpose() @ self.e3
         pts_temp = self.R_iv @ (self.x[2] * l_temp @ np.linalg.inv(np.diag((self.e3.transpose() @ l_temp)[0]))) + self.x
-        lbz = np.hstack((self.x, pts_temp.reshape(-1, 1)))       # z-axis body frame line
+        if self.show_z:
+            lbz = np.hstack((self.x, pts_temp.reshape(-1, 1)))       # z-axis body frame line
 
         # Plotting handles
         self.plos = self.ax.plot3D(llos[0, :], llos[1, :], llos[2, :])  # plot line of sight vector
@@ -101,10 +101,10 @@ class UAV_simulator:
         self.plcamx = self.ax.plot3D(lcamx[0, :], lcamx[1, :], lcamx[2, :], 'b--')       # plot camera x axis
         if self.show_north:
             self.plbNorth = self.ax.plot3D(lbNorth[0, :], lbNorth[1, :], lbNorth[2, :], 'g-')       # plot North heading line on body
-        self.plbz = self.ax.plot3D(lbz[0, :], lbz[1, :], lbz[2, :], 'k-')       # plot z-axis body frame line
+        if self.show_z:
+            self.plbz = self.ax.plot3D(lbz[0, :], lbz[1, :], lbz[2, :], 'k-')       # plot z-axis body frame line
         plpts = np.hstack((pts, pts[:, 0].reshape(-1, 1)))       # field of view extent points (with redundant final point)
         self.pfov = self.ax.plot3D(plpts[0, :], plpts[1, :], plpts[2, :], 'c-')       # plot field of view polygon projection on observation plane
-        # self.quiv = self.ax.plot3D(lquiv[0, :], lquiv[1, :], lquiv[2, :], 'b-', LineWidth=5)       # plot UAV arrow
 
         self.UpdateAirCraftModel(init=True)
 
@@ -206,8 +206,6 @@ class UAV_simulator:
             # Rotate animation lines and points back out to common inertial frame for plotting
             llos = np.hstack([self.x, self.xt])  # line of sight vector
             lx = np.hstack((np.zeros((3, 1)), self.e1))*self.x_line_scale
-            # lquiv = np.hstack((np.zeros((3, 1)), self.e1)) * self.uav_length
-            # lquiv = self.R_iv.transpose() @ self.R_vb.transpose() @ lquiv + self.x  # transformed UAV heading arrow
             lcamx = self.R_iv.transpose() @ self.R_vb.transpose() @ self.R_bg.transpose() @ self.R_gc.transpose() @ self.R_perturb.transpose() @ lx + self.x  # transformed camera x-axis line
             if self.show_north:
                 lbNorth = self.R_iv.transpose() @ lx + self.x  # transformed North heading line
@@ -229,7 +227,8 @@ class UAV_simulator:
 
             l_temp = self.R_vb.transpose() @ self.e3
             pts_temp = self.R_iv @ (self.x[2] * l_temp @ np.linalg.inv(np.diag((self.e3.transpose() @ l_temp)[0]))) + self.x  # body z-axis line points on observation plane
-            lbz = np.hstack((self.x, pts_temp.reshape(-1, 1)))  # z-axis body frame line
+            if self.show_z:
+                lbz = np.hstack((self.x, pts_temp.reshape(-1, 1)))  # z-axis body frame line
 
             # Plotting handles
             self.plos[0].set_data_3d(llos[0, :], llos[1, :], llos[2, :])  # plot line of sight vector
@@ -244,9 +243,9 @@ class UAV_simulator:
             self.plcamx[0].set_data_3d(lcamx[0, :], lcamx[1, :], lcamx[2, :])  # plot camera x axis
             if self.show_north:
                 self.plbNorth[0].set_data_3d(lbNorth[0, :], lbNorth[1, :], lbNorth[2, :])  # plot North heading line on body
-            self.plbz[0].set_data_3d(lbz[0, :], lbz[1, :], lbz[2, :])  # plot z-axis body frame line
+            if self.show_z:
+                self.plbz[0].set_data_3d(lbz[0, :], lbz[1, :], lbz[2, :])  # plot z-axis body frame line
             self.pfov[0].set_data_3d(plpts[0, :], plpts[1, :], plpts[2, :])  # plot field of view polygon projection on observation plane
-            # self.quiv[0].set_data_3d(lquiv[0, :], lquiv[1, :], lquiv[2, :])  # plot UAV arrow
 
             self.UpdateAirCraftModel()  # update UAV model plot
 
@@ -357,8 +356,9 @@ class UAV_simulator:
         # update body frame z-axis vector plot
         l_temp = self.R_vb.transpose() @ self.R_bg.transpose() @ self.R_gc.transpose() @ self.R_perturb.transpose() @ self.R_gc @ self.R_bg @ self.e3
         pts_temp = self.R_iv @ (self.x[2] * l_temp @ np.linalg.inv(np.diag((self.e3.transpose() @ l_temp)[0]))) + self.x  # body z-axis line points on observation plane
-        lbz = np.hstack((self.x, pts_temp.reshape(-1, 1)))  # z-axis body frame line
-        self.plbz[0].set_data_3d(lbz[0, :], lbz[1, :], lbz[2, :])  # plot z-axis body frame line
+        if self.show_z:
+            lbz = np.hstack((self.x, pts_temp.reshape(-1, 1)))  # z-axis body frame line
+            self.plbz[0].set_data_3d(lbz[0, :], lbz[1, :], lbz[2, :])  # plot z-axis body frame line
 
     # determines if target line of sight projection is within camera limits
     def CheckInFOV(self, visualize=True):
