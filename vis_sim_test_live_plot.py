@@ -65,7 +65,7 @@ if __name__ == "__main__":
     # plotting vectors
     t_end = 10.0
     dt = 0.1
-    _t = np.linspace(0.0, t_end, num=t_end / dt)
+    _t = np.linspace(0.0, t_end, num=int(t_end / dt))
     z_line = _t*0.0  # zero reference line
     u_line = z_line + 180.0  # upper limit reference line
     l_line = z_line - 180.0  # lower limit reference line
@@ -188,11 +188,20 @@ if __name__ == "__main__":
 
     ########################### Plot critical boundaries over time #########################
 
+
+    seperate_plots = True
     plt.figure(3)
-    plt.suptitle('Rotational Bounds about Standard Axes of Motion')
+    plt.tight_layout()
+    if seperate_plots:
+        plt.suptitle('Rotational Bounds about UAV Axes of Motion')
+    else:
+        plt.suptitle('Rotational Bounds about Standard Axes of Motion')
 
     # -------------------- plot rotation bounds for roll --------------------
-    plt.subplot(321)
+    if seperate_plots:
+        plt.subplot(311)
+    else:
+        plt.subplot(321)
     plt.plot(np.array([0.0, 0.0]), np.array([0.0, 0.0]), 'b')  # dummy for legend
     plt.plot(np.array([0.0, 0.0]), np.array([0.0, 0.0]), 'r')  # dummy for legend
     for j in range(len(_a1[0])):
@@ -205,12 +214,14 @@ if __name__ == "__main__":
     plt.plot(_t, u_line, 'k-')
     plt.plot(_t, l_line, 'k-')
     plt.title('Roll Axis Constraint Transform')
-    # plt.xlabel('Time (s)')
     plt.ylabel('Rotation Bounds (deg)')
     plt.legend(("Visibility Region (In Region)", "Visibility Region (Out of Region)"))
 
     # -------------------- plot rotation bounds for pitch --------------------
-    plt.subplot(323)
+    if seperate_plots:
+        plt.subplot(312)
+    else:
+        plt.subplot(323)
     for j in range(len(_a2[0])):
         zone_plot(_in_sight[j], _t[j], _a2[:, j].reshape(-1, 1))
         # if _in_sight[j]:
@@ -221,11 +232,13 @@ if __name__ == "__main__":
     plt.plot(_t, u_line, 'k-')
     plt.plot(_t, l_line, 'k-')
     plt.title('Pitch Axis Constraint Transform')
-    # plt.xlabel('Time (s)')
     plt.ylabel('Rotation Bounds (deg)')
 
     # -------------------- plot rotation bounds for yaw --------------------
-    plt.subplot(325)
+    if seperate_plots:
+        plt.subplot(313)
+    else:
+        plt.subplot(325)
     for j in range(len(_a3[0])):
         zone_plot(_in_sight[j], _t[j], _a3[:, j].reshape(-1, 1))
         # if _in_sight[j]:
@@ -251,7 +264,17 @@ if __name__ == "__main__":
     plt.ylabel('Rotation Bounds (deg)')
 
     # -------------------- plot rotation bounds for roll gimbal --------------------
-    plt.subplot(322)
+    if seperate_plots:
+        plt.figure(4)
+        plt.tight_layout()
+        plt.suptitle('Rotational Bounds about Gimbal Axes of Motion')
+        plt.subplot(311)
+        plt.plot(np.array([0.0, 0.0]), np.array([0.0, 0.0]), 'b')  # dummy for legend
+        plt.plot(np.array([0.0, 0.0]), np.array([0.0, 0.0]), 'r')  # dummy for legend
+        plt.ylabel('Rotation Bounds (deg)')
+        plt.legend(("Visibility Region (In Region)", "Visibility Region (Out of Region)"))
+    else:
+        plt.subplot(322)
     for j in range(len(_a4[0])):
         zone_plot(_in_sight[j], _t[j], _a4[:, j].reshape(-1, 1))
         # if _in_sight[j]:
@@ -262,11 +285,13 @@ if __name__ == "__main__":
     plt.plot(_t, u_line, 'k-')
     plt.plot(_t, l_line, 'k-')
     plt.title('Roll Gimbal Axis Constraint Transform')
-    # plt.xlabel('Time (s)')
-    # plt.ylabel('Rotation Bounds (deg)')
 
     # -------------------- plot rotation bounds for pitch gimbal --------------------
-    plt.subplot(324)
+    if seperate_plots:
+        plt.subplot(312)
+        plt.ylabel('Rotation Bounds (deg)')
+    else:
+        plt.subplot(324)
     for j in range(len(_a5[0])):
         zone_plot(_in_sight[j], _t[j], _a5[:, j].reshape(-1, 1))
         # if _in_sight[j]:
@@ -277,11 +302,13 @@ if __name__ == "__main__":
     plt.plot(_t, u_line, 'k-')
     plt.plot(_t, l_line, 'k-')
     plt.title('Pitch Gimbal Axis Constraint Transform')
-    # plt.xlabel('Time (s)')
-    # plt.ylabel('Rotation Bounds (deg)')
 
     # -------------------- plot rotation bounds for yaw gimbal --------------------
-    plt.subplot(326)
+    if seperate_plots:
+        plt.subplot(313)
+        plt.ylabel('Rotation Bounds (deg)')
+    else:
+        plt.subplot(326)
     for j in range(len(_a6[0])):
         zone_plot(_in_sight[j], _t[j], _a6[:, j].reshape(-1, 1))
         # if _in_sight[j]:
@@ -304,28 +331,28 @@ if __name__ == "__main__":
     plt.plot(_t, l_line, 'k-')
     plt.title('Yaw Gimbal Axis Constraint Transform')
     plt.xlabel('Time (s)')
-    # plt.ylabel('Rotation Bounds (deg)')
 
     plt.pause(0.1)
 
     ########################### Plot Target projetion path #########################
 
-    plt.figure(4)
+    plt.figure(5)
     if _in_sight[0]:
-        pp1 = plt.plot(_pi[0, 0], _pi[1, 0], markersize=15.0, markerfacecolor='b', marker='X', linestyle='None', markeredgecolor='k')
+        pp1 = plt.plot(_pi[1, 0], _pi[0, 0], markersize=15.0, markerfacecolor='b', marker='X', linestyle='None', markeredgecolor='k')
     else:
-        pp1 = plt.plot(_pi[0, 0], _pi[1, 0], markersize=15.0, markerfacecolor='r', marker='X', linestyle='None', markeredgecolor='k')
-    pp2 = plt.plot(_pi[0, 1:][_in_sight[1:]], _pi[1, 1:][_in_sight[1:]], markersize=5.0, markerfacecolor='b', marker='o', linestyle='None', markeredgecolor='k')
-    pp3 = plt.plot(_pi[0, 1:][~_in_sight[1:]], _pi[1, 1:][~_in_sight[1:]], markersize=5.0, markerfacecolor='r', marker='o', linestyle='None', markeredgecolor='k')
-    pp4 = plt.plot(_pi[0], _pi[1], 'k', LineWidth=0.25)
-    pp5 = plt.plot(np.array([-sim.cam_lims[0, 0], sim.cam_lims[0, 0]]), np.array([sim.cam_lims[1, 0], sim.cam_lims[1, 0]]), 'b')
-    plt.plot(np.array([-sim.cam_lims[0, 0], sim.cam_lims[0, 0]]), np.array([-sim.cam_lims[1, 0], -sim.cam_lims[1, 0]]), 'b')
-    plt.plot(np.array([sim.cam_lims[0, 0], sim.cam_lims[0, 0]]), np.array([-sim.cam_lims[1, 0], sim.cam_lims[1, 0]]), 'b')
-    plt.plot(np.array([-sim.cam_lims[0, 0], -sim.cam_lims[0, 0]]), np.array([-sim.cam_lims[1, 0], sim.cam_lims[1, 0]]), 'b')
+        pp1 = plt.plot(_pi[1, 0], _pi[0, 0], markersize=15.0, markerfacecolor='r', marker='X', linestyle='None', markeredgecolor='k')
+    pp2 = plt.plot(_pi[1, 1:][_in_sight[1:]], _pi[0, 1:][_in_sight[1:]], markersize=5.0, markerfacecolor='b', marker='o', linestyle='None', markeredgecolor='k')
+    pp3 = plt.plot(_pi[1, 1:][~_in_sight[1:]], _pi[0, 1:][~_in_sight[1:]], markersize=5.0, markerfacecolor='r', marker='o', linestyle='None', markeredgecolor='k')
+    pp4 = plt.plot(_pi[1], _pi[0], 'k', LineWidth=0.25)
+    pp5 = plt.plot(np.array([-sim.cam_lims[1, 0], sim.cam_lims[1, 0]]), np.array([sim.cam_lims[0, 0], sim.cam_lims[0, 0]]), 'b')
+    plt.plot(np.array([-sim.cam_lims[1, 0], sim.cam_lims[1, 0]]), np.array([-sim.cam_lims[0, 0], -sim.cam_lims[0, 0]]), 'b')
+    plt.plot(np.array([sim.cam_lims[1, 0], sim.cam_lims[1, 0]]), np.array([-sim.cam_lims[0, 0], sim.cam_lims[0, 0]]), 'b')
+    plt.plot(np.array([-sim.cam_lims[1, 0], -sim.cam_lims[1, 0]]), np.array([-sim.cam_lims[0, 0], sim.cam_lims[0, 0]]), 'b')
     plt.legend(('Start', 'Projection (FOV)', 'Projection (not FOV)', 'Projection Path', 'Camera FOV Bounds'))
     plt.title('Target Projection Path on Normalized Image Plane')
-    plt.xlabel('x')
-    plt.ylabel('y')
+    plt.xlabel('y')
+    plt.ylabel('x')
+    plt.axes().set_aspect('equal', 'datalim')
     plt.pause(0.1)
 
     plt.show()
