@@ -29,12 +29,13 @@ if __name__ == "__main__":
     sim.UpdateVFOV(v_fov, visualize=False)
     print("**UAV and Target Poses Randomized**")
 
-    v_r = sim.R_gc @ sim.R_bg @ sim.e1
-    v_p = sim.R_gc @ sim.R_bg @ sim.e2
-    v_y = sim.R_gc @ sim.R_bg @ sim.e3
-    v_yg = sim.R_gc @ sim.e3
-    v_pg = sim.R_gc @ sim.e2
-    v_rg = sim.R_gc @ sim.e1
+    v_combined = sim.GetAxes()
+    v_y = v_combined[:, 0].reshape(-1, 1)
+    v_p = v_combined[:, 1].reshape(-1, 1)
+    v_r = v_combined[:, 2].reshape(-1, 1)
+    v_yg = v_combined[:, 3].reshape(-1, 1)
+    v_pg = v_combined[:, 4].reshape(-1, 1)
+    v_rg = v_combined[:, 5].reshape(-1, 1)
 
     if Display_Intermediate_Outputs:
         display_time = 1.0  # display time for critical angle display
@@ -42,217 +43,98 @@ if __name__ == "__main__":
 
     start = time.time()
     # critical roll angles
-    sim.UpdatePertR(np.eye(3))
-    [ang1, ang2, ang3, ang4] = sim.CalculateCriticalAngles(v_r, all=all_constraints)  # right, left, top, bottom
-    angs_r = np.hstack([ang1, ang2, ang3, ang4]) * 180 / np.pi
-
-    for i in range(len(ang1)):
+    sim.UpdatePert_ypr_UAV(np.array([0, 0, 0]), visualize=False)
+    sim.UpdatePert_ypr_Gimbal(np.array([0, 0, 0]), visualize=False)
+    angs = sim.CalculateCriticalAngles(v_r, all=all_constraints)
+    angs = -angs[~np.isnan(angs)]
+    angs_r = angs * 180 / np.pi
+    for i in range(len(angs)):
         if Display_Intermediate_Outputs:
-            print("UAV Roll Constraints (First, Second, Third, Fourth): ", angs_r)
-            sim.UpdatePertR(sim.axis_angle_to_R(v_r, ang1[i]), visualize=True)
-            print("Displaying First Roll Constraint...")
+            print("UAV Roll Constraints: ", angs)
+            sim.UpdatePert_ypr_UAV(np.array([0, 0, angs[i]]), visualize=True)
+            print("Displaying Roll Constraint: ", i+1)
             plt.pause(display_time)
         else:
-            sim.UpdatePertR(sim.axis_angle_to_R(v_r, ang1[i]), visualize=False)
-    for i in range(len(ang2)):
-        if Display_Intermediate_Outputs:
-            sim.UpdatePertR(sim.axis_angle_to_R(v_r, ang2[i]), visualize=True)
-            print("Displaying Second Roll Constraint...")
-            plt.pause(display_time)
-        else:
-            sim.UpdatePertR(sim.axis_angle_to_R(v_r, ang2[i]), visualize=False)
-    for i in range(len(ang3)):
-        if Display_Intermediate_Outputs:
-            sim.UpdatePertR(sim.axis_angle_to_R(v_r, ang3[i]), visualize=True)
-            print("Displaying Third Roll Constraint...")
-            plt.pause(display_time)
-        else:
-            sim.UpdatePertR(sim.axis_angle_to_R(v_r, ang3[i]), visualize=False)
-    for i in range(len(ang4)):
-        if Display_Intermediate_Outputs:
-            sim.UpdatePertR(sim.axis_angle_to_R(v_r, ang4[i]), visualize=True)
-            print("Displaying Fourth Roll Constraint...")
-            plt.pause(display_time)
-        else:
-            sim.UpdatePertR(sim.axis_angle_to_R(v_r, ang4[i]), visualize=False)
+            sim.UpdatePert_ypr_UAV(np.array([0, 0, angs[i]]), visualize=False)
 
     # critical pitch angles
-    sim.UpdatePertR(np.eye(3), visualize=False)
-    [ang1, ang2, ang3, ang4] = sim.CalculateCriticalAngles(v_p, all=all_constraints)  # right, left, top, bottom
-    angs_p = np.hstack([ang1, ang2, ang3, ang4]) * 180 / np.pi
-
-    for i in range(len(ang1)):
+    sim.UpdatePert_ypr_UAV(np.array([0, 0, 0]), visualize=False)
+    sim.UpdatePert_ypr_Gimbal(np.array([0, 0, 0]), visualize=False)
+    angs = sim.CalculateCriticalAngles(v_p, all=all_constraints)
+    angs = -angs[~np.isnan(angs)]
+    angs_p = angs * 180 / np.pi
+    for i in range(len(angs)):
         if Display_Intermediate_Outputs:
-            print("UAV Pitch Constraints (First, Second, Third, Fourth): ", angs_p)
-            sim.UpdatePertR(sim.axis_angle_to_R(v_p, ang1[i]), visualize=True)
-            print("Displaying First Pitch Constraint...")
+            print("UAV Pitch Constraints: ", angs)
+            sim.UpdatePert_ypr_UAV(np.array([0, angs[i], 0]), visualize=True)
+            print("Displaying Pitch Constraint: ", i + 1)
             plt.pause(display_time)
         else:
-            sim.UpdatePertR(sim.axis_angle_to_R(v_p, ang1[i]), visualize=False)
-    for i in range(len(ang2)):
-        if Display_Intermediate_Outputs:
-            sim.UpdatePertR(sim.axis_angle_to_R(v_p, ang2[i]), visualize=True)
-            print("Displaying Second Pitch Constraint...")
-            plt.pause(display_time)
-        else:
-            sim.UpdatePertR(sim.axis_angle_to_R(v_p, ang2[i]), visualize=False)
-    for i in range(len(ang3)):
-        if Display_Intermediate_Outputs:
-            sim.UpdatePertR(sim.axis_angle_to_R(v_p, ang3[i]), visualize=True)
-            print("Displaying Third Pitch Constraint...")
-            plt.pause(display_time)
-        else:
-            sim.UpdatePertR(sim.axis_angle_to_R(v_p, ang3[i]), visualize=False)
-    for i in range(len(ang4)):
-        if Display_Intermediate_Outputs:
-            sim.UpdatePertR(sim.axis_angle_to_R(v_p, ang4[i]), visualize=True)
-            print("Displaying Fourth Pitch Constraint...")
-            plt.pause(display_time)
-        else:
-            sim.UpdatePertR(sim.axis_angle_to_R(v_p, ang4[i]), visualize=False)
+            sim.UpdatePert_ypr_UAV(np.array([0, angs[i], 0]), visualize=False)
 
     # critical yaw angles
-    sim.UpdatePertR(np.eye(3), visualize=False)
-    [ang1, ang2, ang3, ang4] = sim.CalculateCriticalAngles(v_y, all=all_constraints)  # right, left, top, bottom
-    angs_y = np.hstack([ang1, ang2, ang3, ang4]) * 180 / np.pi
-
-    for i in range(len(ang1)):
+    sim.UpdatePert_ypr_UAV(np.array([0, 0, 0]), visualize=False)
+    sim.UpdatePert_ypr_Gimbal(np.array([0, 0, 0]), visualize=False)
+    angs = sim.CalculateCriticalAngles(v_y, all=all_constraints)
+    angs = -angs[~np.isnan(angs)]
+    angs_y = angs * 180 / np.pi
+    for i in range(len(angs)):
         if Display_Intermediate_Outputs:
-            print("UAV Yaw Constraints (First, Second, Third, Fourth): ", angs_y)
-            sim.UpdatePertR(sim.axis_angle_to_R(v_y, ang1[i]), visualize=True)
-            print("Displaying First Yaw Constraint...")
+            print("UAV Yaw Constraints: ", angs)
+            sim.UpdatePert_ypr_UAV(np.array([angs[i], 0, 0]), visualize=True)
+            print("Displaying Yaw Constraint: ", i + 1)
             plt.pause(display_time)
         else:
-            sim.UpdatePertR(sim.axis_angle_to_R(v_y, ang1[i]), visualize=False)
-    for i in range(len(ang2)):
-        if Display_Intermediate_Outputs:
-            sim.UpdatePertR(sim.axis_angle_to_R(v_y, ang2[i]), visualize=True)
-            print("Displaying Second Yaw Constraint...")
-            plt.pause(display_time)
-        else:
-            sim.UpdatePertR(sim.axis_angle_to_R(v_y, ang2[i]), visualize=False)
-    for i in range(len(ang3)):
-        if Display_Intermediate_Outputs:
-            sim.UpdatePertR(sim.axis_angle_to_R(v_y, ang3[i]), visualize=True)
-            print("Displaying Third Yaw Constraint...")
-            plt.pause(display_time)
-        else:
-            sim.UpdatePertR(sim.axis_angle_to_R(v_y, ang3[i]), visualize=False)
-    for i in range(len(ang4)):
-        if Display_Intermediate_Outputs:
-            sim.UpdatePertR(sim.axis_angle_to_R(v_y, ang4[i]), visualize=True)
-            print("Displaying Fourth Yaw Constraint...")
-            plt.pause(display_time)
-        else:
-            sim.UpdatePertR(sim.axis_angle_to_R(v_y, ang4[i]), visualize=False)
-
-    # critical gimbal yaw angles
-    sim.UpdatePertR(np.eye(3), visualize=False)
-    [ang1, ang2, ang3, ang4] = sim.CalculateCriticalAngles(v_yg, all=all_constraints)  # right, left, top, bottom
-    angs_yg = np.hstack([ang1, ang2, ang3, ang4]) * 180 / np.pi
-
-    for i in range(len(ang1)):
-        if Display_Intermediate_Outputs:
-            print("Gimbal Yaw Constraints (First, Second, Third, Fourth): ", angs_yg)
-            sim.UpdatePertR(sim.axis_angle_to_R(v_yg, ang1[i]), visualize=True)
-            print("Displaying First Gimbal Yaw Constraint...")
-            plt.pause(display_time)
-        else:
-            sim.UpdatePertR(sim.axis_angle_to_R(v_yg, ang1[i]), visualize=False)
-    for i in range(len(ang2)):
-        if Display_Intermediate_Outputs:
-            sim.UpdatePertR(sim.axis_angle_to_R(v_yg, ang2[i]), visualize=True)
-            print("Displaying Second Gimbal Yaw Constraint...")
-            plt.pause(display_time)
-        else:
-            sim.UpdatePertR(sim.axis_angle_to_R(v_yg, ang2[i]), visualize=False)
-    for i in range(len(ang3)):
-        if Display_Intermediate_Outputs:
-            sim.UpdatePertR(sim.axis_angle_to_R(v_yg, ang3[i]), visualize=True)
-            print("Displaying Third Gimbal Yaw Constraint...")
-            plt.pause(display_time)
-        else:
-            sim.UpdatePertR(sim.axis_angle_to_R(v_yg, ang3[i]), visualize=False)
-    for i in range(len(ang4)):
-        if Display_Intermediate_Outputs:
-            sim.UpdatePertR(sim.axis_angle_to_R(v_yg, ang4[i]), visualize=True)
-            print("Displaying Fourth Gimbal Yaw Constraint...")
-            plt.pause(display_time)
-        else:
-            sim.UpdatePertR(sim.axis_angle_to_R(v_yg, ang4[i]), visualize=False)
-
-    # critical gimbal pitch angles
-    sim.UpdatePertR(np.eye(3), visualize=False)
-    [ang1, ang2, ang3, ang4] = sim.CalculateCriticalAngles(v_pg, all=all_constraints)  # right, left, top, bottom
-    angs_pg = np.hstack([ang1, ang2, ang3, ang4]) * 180 / np.pi
-
-    for i in range(len(ang1)):
-        if Display_Intermediate_Outputs:
-            print("Gimbal Pitch Constraints (First, Second, Third, Fourth): ", angs_pg)
-            sim.UpdatePertR(sim.axis_angle_to_R(v_pg, ang1[i]), visualize=True)
-            print("Displaying First Gimbal Pitch Constraint...")
-            plt.pause(display_time)
-        else:
-            sim.UpdatePertR(sim.axis_angle_to_R(v_pg, ang1[i]), visualize=False)
-    for i in range(len(ang2)):
-        if Display_Intermediate_Outputs:
-            sim.UpdatePertR(sim.axis_angle_to_R(v_pg, ang2[i]), visualize=True)
-            print("Displaying Second Gimbal Pitch Constraint...")
-            plt.pause(display_time)
-        else:
-            sim.UpdatePertR(sim.axis_angle_to_R(v_pg, ang2[i]), visualize=False)
-    for i in range(len(ang3)):
-        if Display_Intermediate_Outputs:
-            sim.UpdatePertR(sim.axis_angle_to_R(v_pg, ang3[i]), visualize=True)
-            print("Displaying Third Gimbal Pitch Constraint...")
-            plt.pause(display_time)
-        else:
-            sim.UpdatePertR(sim.axis_angle_to_R(v_pg, ang3[i]), visualize=False)
-    for i in range(len(ang4)):
-        if Display_Intermediate_Outputs:
-            sim.UpdatePertR(sim.axis_angle_to_R(v_pg, ang4[i]), visualize=True)
-            print("Displaying Fourth Gimbal Pitch Constraint...")
-            plt.pause(display_time)
-        else:
-            sim.UpdatePertR(sim.axis_angle_to_R(v_pg, ang4[i]), visualize=False)
+            sim.UpdatePert_ypr_UAV(np.array([angs[i], 0, 0]), visualize=False)
 
     # critical gimbal roll angles
-    sim.UpdatePertR(np.eye(3), visualize=False)
-    [ang1, ang2, ang3, ang4] = sim.CalculateCriticalAngles(v_rg, all=all_constraints)  # right, left, top, bottom
-    angs_rg = np.hstack([ang1, ang2, ang3, ang4]) * 180 / np.pi
+    sim.UpdatePert_ypr_UAV(np.array([0, 0, 0]), visualize=False)
+    sim.UpdatePert_ypr_Gimbal(np.array([0, 0, 0]), visualize=False)
+    angs = sim.CalculateCriticalAngles(v_rg, all=all_constraints)
+    angs = -angs[~np.isnan(angs)]
+    angs_rg = angs * 180 / np.pi
+    for i in range(len(angs)):
+        if Display_Intermediate_Outputs:
+            print("Gimbal Roll Constraints: ", angs)
+            sim.UpdatePert_ypr_Gimbal(np.array([0, 0, angs[i]]), visualize=True)
+            print("Displaying Gimbal Roll Constraint: ", i+1)
+            plt.pause(display_time)
+        else:
+            sim.UpdatePert_ypr_Gimbal(np.array([0, 0, angs[i]]), visualize=False)
 
-    for i in range(len(ang1)):
+    # critical gimbal pitch angles
+    sim.UpdatePert_ypr_UAV(np.array([0, 0, 0]), visualize=False)
+    sim.UpdatePert_ypr_Gimbal(np.array([0, 0, 0]), visualize=False)
+    angs = sim.CalculateCriticalAngles(v_pg, all=all_constraints)
+    angs = -angs[~np.isnan(angs)]
+    angs_pg = angs * 180 / np.pi
+    for i in range(len(angs)):
         if Display_Intermediate_Outputs:
-            print("Gimbal Roll Constraints (First, Second, Third, Fourth): ", angs_rg)
-            sim.UpdatePertR(sim.axis_angle_to_R(v_rg, ang1[i]), visualize=True)
-            print("Displaying First Gimbal Roll Constraint...")
+            print("Gimbal Pitch Constraints: ", angs)
+            sim.UpdatePert_ypr_Gimbal(np.array([0, angs[i], 0]), visualize=True)
+            print("Displaying Gimbal Pitch Constraint: ", i+1)
             plt.pause(display_time)
         else:
-            sim.UpdatePertR(sim.axis_angle_to_R(v_rg, ang1[i]), visualize=False)
-    for i in range(len(ang2)):
+            sim.UpdatePert_ypr_Gimbal(np.array([0, angs[i], 0]), visualize=False)
+
+    # critical gimbal yaw angles
+    sim.UpdatePert_ypr_UAV(np.array([0, 0, 0]), visualize=False)
+    sim.UpdatePert_ypr_Gimbal(np.array([0, 0, 0]), visualize=False)
+    angs = sim.CalculateCriticalAngles(v_yg, all=all_constraints)
+    angs = -angs[~np.isnan(angs)]
+    angs_yg = angs * 180 / np.pi
+    for i in range(len(angs)):
         if Display_Intermediate_Outputs:
-            sim.UpdatePertR(sim.axis_angle_to_R(v_rg, ang2[i]), visualize=True)
-            print("Displaying Second Gimbal Roll Constraint...")
+            print("Gimbal Roll Constraints: ", angs)
+            sim.UpdatePert_ypr_Gimbal(np.array([angs[i], 0, 0]), visualize=True)
+            print("Displaying Gimbal Roll Constraint: ", i+1)
             plt.pause(display_time)
         else:
-            sim.UpdatePertR(sim.axis_angle_to_R(v_rg, ang2[i]), visualize=False)
-    for i in range(len(ang3)):
-        if Display_Intermediate_Outputs:
-            sim.UpdatePertR(sim.axis_angle_to_R(v_rg, ang3[i]), visualize=True)
-            print("Displaying Third Gimbal Roll Constraint...")
-            plt.pause(display_time)
-        else:
-            sim.UpdatePertR(sim.axis_angle_to_R(v_rg, ang3[i]), visualize=False)
-    for i in range(len(ang4)):
-        if Display_Intermediate_Outputs:
-            sim.UpdatePertR(sim.axis_angle_to_R(v_rg, ang4[i]), visualize=True)
-            print("Displaying Fourth Gimbal Roll Constraint...")
-            plt.pause(display_time)
-        else:
-            sim.UpdatePertR(sim.axis_angle_to_R(v_rg, ang4[i]), visualize=False)
+            sim.UpdatePert_ypr_Gimbal(np.array([angs[i], 0, 0]), visualize=False)
 
     # return to original sim location
-    sim.UpdatePertR(np.eye(3))
+    sim.UpdatePert_ypr_UAV(np.array([0, 0, 0]), visualize=True)
+    sim.UpdatePert_ypr_Gimbal(np.array([0, 0, 0]), visualize=True)
     end = time.time()
     print("Calculation Time: ", end-start, "seconds")
     print("Displaying Original UAV Pose")

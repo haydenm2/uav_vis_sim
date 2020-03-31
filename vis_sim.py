@@ -384,7 +384,7 @@ class UAV_simulator:
             self.plbz[0].set_data_3d(lbz[0, :], lbz[1, :], lbz[2, :])  # plot z-axis body frame line
 
     # returns current controllable rotational axes in camera frame
-    def ReturnAxes(self):
+    def GetAxes(self):
         v_yaw = self.R_gc @ self.R_bg @ self.e3
         v_pitch = self.R_gc @ self.R_bg @ self.e2
         v_roll = self.R_gc @ self.R_bg @ self.e1
@@ -506,8 +506,8 @@ class UAV_simulator:
             ang8 = np.array([])
         else:
             pass
-
-        return [ang1, ang2, ang3, ang4, ang5, ang6, ang7, ang8]
+        angs_combined = np.hstack([ang1, ang2, ang3, ang4, ang5, ang6, ang7, ang8])
+        return angs_combined
 
     # calculates passive rotation matrix from axis angle rotation
     def axis_angle_to_R(self, ax, ang):
