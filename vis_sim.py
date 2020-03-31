@@ -398,7 +398,7 @@ class UAV_simulator:
     def CheckInFOV(self, visualize=True):
         temp = self.F.T @ self.p_t
         # are all target projection point components within all image borders? -> within field of view
-        if np.all(temp >= 0):
+        if np.all(temp >= self.delta_b):
             self.in_sight = True
             if visualize:
                 self.axc.set_xlabel('x \n Target in sight: True', color="green", fontweight='bold')
@@ -488,25 +488,28 @@ class UAV_simulator:
                 # get largest negative angle
                 ang1 = np.array([angs[np.where(angs < 0, angs, -np.inf).argmax()]])
             except:
-                ang1 = np.array([])
+                ang1 = np.array([np.nan])
             try:
                 # get smallest positive angle
                 ang2 = np.array([angs[np.where(angs > 0, angs, np.inf).argmin()]])
             except:
-                ang2 = np.array([])
+                ang2 = np.array([np.nan])
             # if angles all have same sign then return both angles
             if ang1 == ang2:
-                ang2 = angs[angs != ang1]
+                nonan = angs[~np.isnan(angs)]
+                ang2 = nonan[np.logical_and(nonan != ang1, np.abs(nonan) == np.min(np.abs(nonan[nonan != ang1])))]
             # only max of two closest angles (one on either side) so others are cleared
-            ang3 = np.array([])
-            ang4 = np.array([])
-            ang5 = np.array([])
-            ang6 = np.array([])
-            ang7 = np.array([])
-            ang8 = np.array([])
+            ang3 = np.array([np.nan])
+            ang4 = np.array([np.nan])
+            ang5 = np.array([np.nan])
+            ang6 = np.array([np.nan])
+            ang7 = np.array([np.nan])
+            ang8 = np.array([np.nan])
         else:
             pass
         angs_combined = np.hstack([ang1, ang2, ang3, ang4, ang5, ang6, ang7, ang8])
+        if len(angs_combined)>8:
+            a = 1
         return angs_combined
 
     # calculates passive rotation matrix from axis angle rotation
