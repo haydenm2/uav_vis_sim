@@ -82,8 +82,8 @@ if __name__ == "__main__":
     init = True                         # data struct initialization flag
     show_sim = False                    # toggle display of simulated course
     all_constraints = True              # toggle to return all critical angle constraint solutions or just the closest on either side of the current orientation
-    find_fit = True                    # toggle whether to identify fit parameters with no gimbal control or implement given parameters
-    if ~find_fit:
+    apply_fit = True                   # toggle whether to apply fit parameters to gimbal control or not
+    if apply_fit:
         atan_a, atan_b, atan_c, atan_d = 1.00000000e+00, 5.00000000e-02, -1.72300000e+00, -1.79407593e-09   # calculated parameters for arctangent curve fit
 
     # Initialize simulator
@@ -100,10 +100,10 @@ if __name__ == "__main__":
     x = np.vstack([0*_t, Va*_t, 0*_t]) + x0.reshape(-1, 1)
     xt = np.vstack([0*_t, 0*_t, 0*_t]) + xt0.reshape(-1, 1)
     ypr = np.vstack([0*_t, 0*_t, 0*_t]) + ypr0.reshape(-1, 1)
-    if find_fit:
-        ypr_g = np.vstack([0*_t, 0*_t, 0*_t]) + ypr_g0.reshape(-1, 1)
-    else:
+    if apply_fit:
         ypr_g = np.vstack([0*_t, -atan_fit(_t, atan_a, atan_b, atan_c, atan_d), 0*_t])
+    else:
+        ypr_g = np.vstack([0*_t, 0*_t, 0*_t]) + ypr_g0.reshape(-1, 1)
 
     for i in range(len(x[0])):
         sim.UpdateX(x[:, i], visualize=show_sim)
@@ -197,7 +197,7 @@ if __name__ == "__main__":
     sim.UpdateGimbalYPR(ypr_g0, visualize=show_sim)
 
     ########################### Plot critical boundaries over time #########################
-    if find_fit:
+    if ~apply_fit:
         a0 = np.radians(60)/np.radians(90), 2.0, -34.0, 0
         param, param_cov = curve_fit(atan_fit, _t, np.radians((_a5[0]+_a5[1])/2.0), a0)  # result => 1.00000000e+00, 5.00000000e-02, -1.72300000e+00, -1.79407593e-09
         print("Arctan curve fit parameters: ", param)
