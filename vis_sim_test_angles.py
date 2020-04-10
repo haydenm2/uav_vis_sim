@@ -46,7 +46,7 @@ if __name__ == "__main__":
     sim.UpdatePert_ypr_UAV(np.array([0, 0, 0]), visualize=False)
     sim.UpdatePert_ypr_Gimbal(np.array([0, 0, 0]), visualize=False)
     angs = sim.CalculateCriticalAngles(v_r, all=all_constraints)
-    angs = -angs[~np.isnan(angs)]
+    angs = angs[~np.isnan(angs)]
     angs_r = angs * 180 / np.pi
     for i in range(len(angs)):
         if Display_Intermediate_Outputs:
@@ -61,7 +61,7 @@ if __name__ == "__main__":
     sim.UpdatePert_ypr_UAV(np.array([0, 0, 0]), visualize=False)
     sim.UpdatePert_ypr_Gimbal(np.array([0, 0, 0]), visualize=False)
     angs = sim.CalculateCriticalAngles(v_p, all=all_constraints)
-    angs = -angs[~np.isnan(angs)]
+    angs = angs[~np.isnan(angs)]
     angs_p = angs * 180 / np.pi
     for i in range(len(angs)):
         if Display_Intermediate_Outputs:
@@ -76,7 +76,7 @@ if __name__ == "__main__":
     sim.UpdatePert_ypr_UAV(np.array([0, 0, 0]), visualize=False)
     sim.UpdatePert_ypr_Gimbal(np.array([0, 0, 0]), visualize=False)
     angs = sim.CalculateCriticalAngles(v_y, all=all_constraints)
-    angs = -angs[~np.isnan(angs)]
+    angs = angs[~np.isnan(angs)]
     angs_y = angs * 180 / np.pi
     for i in range(len(angs)):
         if Display_Intermediate_Outputs:
@@ -91,7 +91,7 @@ if __name__ == "__main__":
     sim.UpdatePert_ypr_UAV(np.array([0, 0, 0]), visualize=False)
     sim.UpdatePert_ypr_Gimbal(np.array([0, 0, 0]), visualize=False)
     angs = sim.CalculateCriticalAngles(v_rg, all=all_constraints)
-    angs = -angs[~np.isnan(angs)]
+    angs = angs[~np.isnan(angs)]
     angs_rg = angs * 180 / np.pi
     for i in range(len(angs)):
         if Display_Intermediate_Outputs:
@@ -106,7 +106,7 @@ if __name__ == "__main__":
     sim.UpdatePert_ypr_UAV(np.array([0, 0, 0]), visualize=False)
     sim.UpdatePert_ypr_Gimbal(np.array([0, 0, 0]), visualize=False)
     angs = sim.CalculateCriticalAngles(v_pg, all=all_constraints)
-    angs = -angs[~np.isnan(angs)]
+    angs = angs[~np.isnan(angs)]
     angs_pg = angs * 180 / np.pi
     for i in range(len(angs)):
         if Display_Intermediate_Outputs:
@@ -121,7 +121,7 @@ if __name__ == "__main__":
     sim.UpdatePert_ypr_UAV(np.array([0, 0, 0]), visualize=False)
     sim.UpdatePert_ypr_Gimbal(np.array([0, 0, 0]), visualize=False)
     angs = sim.CalculateCriticalAngles(v_yg, all=all_constraints)
-    angs = -angs[~np.isnan(angs)]
+    angs = angs[~np.isnan(angs)]
     angs_yg = angs * 180 / np.pi
     for i in range(len(angs)):
         if Display_Intermediate_Outputs:

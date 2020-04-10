@@ -34,7 +34,7 @@ class UAV_simulator:
         self.e1 = np.array([[1], [0], [0]])  # basis vector 1
         self.e2 = np.array([[0], [1], [0]])  # basis vector 2
         self.e3 = np.array([[0], [0], [1]])  # basis vector 3
-        plt_range = 100
+        plt_range = x0.item(2)
         self.in_sight = False
         self.show_north = False
         self.show_z = False
@@ -431,15 +431,15 @@ class UAV_simulator:
         for i in range(len(self.F[0])):
             n = self.F[:, i].reshape(-1, 1)
             alpha1 = (np.eye(3) - v@v.T) @ self.p_t
-            alpha2 = self.cross_form(v) @ self.p_t
-            alpha3 = v @ v.T @ self.p_t
+            alpha2 = self.cross_form(v).T @ self.p_t
+            alpha3 = (v @ v.T) @ self.p_t
             a = n.T @ alpha1
             b = n.T @ alpha2
             c = n.T @ alpha3
             theta_p = self.Wrap(2.0*np.arctan2((-b + np.sqrt(a**2 + b**2 - c**2)), (c - a))[0, 0])
             theta_n = self.Wrap(2.0*np.arctan2((-b - np.sqrt(a**2 + b**2 - c**2)), (c - a))[0, 0])
-            p_hat_tp = self.axis_angle_to_R(v, theta_p) @ self.p_t
-            p_hat_tn = self.axis_angle_to_R(v, theta_n) @ self.p_t
+            p_hat_tp = self.axis_angle_to_R(v, theta_p).T @ self.p_t
+            p_hat_tn = self.axis_angle_to_R(v, theta_n).T @ self.p_t
             p_bar_tp = p_hat_tp / np.linalg.norm(p_hat_tp)
             p_bar_tn = p_hat_tn / np.linalg.norm(p_hat_tn)
             theta = np.hstack((theta, theta_n))
@@ -508,8 +508,6 @@ class UAV_simulator:
         else:
             pass
         angs_combined = np.hstack([ang1, ang2, ang3, ang4, ang5, ang6, ang7, ang8])
-        if len(angs_combined)>8:
-            a = 1
         return angs_combined
 
     # calculates passive rotation matrix from axis angle rotation

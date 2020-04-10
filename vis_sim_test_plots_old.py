@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from vis_sim import UAV_simulator
+from vis_sim_old import UAV_simulator
 import numpy as np
 import matplotlib.pyplot as plt
 

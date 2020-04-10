@@ -147,27 +147,21 @@ if __name__ == "__main__":
         _pi = np.hstack((_pi, sim.p_i))
 
         _a1 = np.hstack((_a1, angs_r.reshape(-1, 1)))
-        _a1[_a1 == 0] = np.inf
         _a1 = np.sort(_a1, axis=0)
 
         _a2 = np.hstack((_a2, angs_p.reshape(-1, 1)))
-        _a2[_a2 == 0] = np.inf
         _a2 = np.sort(_a2, axis=0)
 
         _a3 = np.hstack((_a3, angs_y.reshape(-1, 1)))
-        _a3[_a3 == 0] = np.inf
         _a3 = np.sort(_a3, axis=0)
 
         _a4 = np.hstack((_a4, angs_rg.reshape(-1, 1)))
-        _a4[_a4 == 0] = np.inf
         _a4 = np.sort(_a4, axis=0)
 
         _a5 = np.hstack((_a5, angs_pg.reshape(-1, 1)))
-        _a5[_a5 == 0] = np.inf
         _a5 = np.sort(_a5, axis=0)
 
         _a6 = np.hstack((_a6, angs_yg.reshape(-1, 1)))
-        _a6[_a6 == 0] = np.inf
         _a6 = np.sort(_a6, axis=0)
 
     # convert angle limits to degrees

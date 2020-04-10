@@ -68,7 +68,7 @@ def atan_fit(x, a, b, c, d):
 if __name__ == "__main__":
 
     # plotting vectors
-    t_end = 69.0
+    t_end = 58.0
     dt = 0.25
     _t = np.linspace(0.0, t_end, num=int(t_end / dt))
     z_line = _t*0.0  # zero reference line
@@ -84,12 +84,12 @@ if __name__ == "__main__":
     all_constraints = True              # toggle to return all critical angle constraint solutions or just the closest on either side of the current orientation
     apply_fit = True                   # toggle whether to apply fit parameters to gimbal control or to simply calculate curve fit with no commands
     if apply_fit:
-        atan_a, atan_b, atan_c, atan_d = -1.00000000e+00, 5.00000000e-02, -1.72300000e+00, -1.79407593e-09   # calculated parameters for arctangent curve fit
+        atan_a, atan_b, atan_c, atan_d = -9.99999996e-01, 4.66578145e-02, -2.97448872e-01, -4.15137246e-09   # calculated parameters for arctangent curve fit
 
     # Initialize simulator
     x0 = np.array([[0, 0, 1000]]).T
-    xt0 = np.array([[0, 1723, 0]]).T
-    ypr0 = np.array([0, 0, 0])
+    xt0 = np.array([[0, 500, 0]]).T
+    ypr0 = np.array([0, np.radians(10), 0])
     ypr_g0 = np.array([0, 0, 0])
     h_fov = np.deg2rad(10)
     v_fov = np.deg2rad(10)
@@ -97,7 +97,7 @@ if __name__ == "__main__":
     sim = UAV_simulator(x0, xt0, ypr0, ypr_g0, h_fov, v_fov)
 
     Va = 50.0
-    x = np.vstack([0*_t, Va*_t, 0*_t]) + x0.reshape(-1, 1)
+    x = np.vstack([0*_t, Va*np.cos(ypr0.item(1))*_t, Va*np.sin(ypr0.item(1))*_t]) + x0.reshape(-1, 1)
     xt = np.vstack([0*_t, 0*_t, 0*_t]) + xt0.reshape(-1, 1)
     ypr = np.vstack([0*_t, 0*_t, 0*_t]) + ypr0.reshape(-1, 1)
     if apply_fit:

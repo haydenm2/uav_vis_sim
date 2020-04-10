@@ -68,10 +68,10 @@ def atan_fit(x, a, b, c, d):
 if __name__ == "__main__":
 
     # plotting vectors
-    t_end = 69.0
-    dt = 0.25
-    _t = np.linspace(0.0, t_end, num=int(t_end / dt))
-    z_line = _t*0.0  # zero reference line
+    x_end = 1732.0
+    dx = 1.0
+    _x = np.linspace(1.0, x_end, num=int(x_end / dx))
+    z_line = _x*0.0  # zero reference line
     u_line = z_line + 180.0  # upper limit reference line
     l_line = z_line - 180.0  # lower limit reference line
 
@@ -82,28 +82,23 @@ if __name__ == "__main__":
     init = True                         # data struct initialization flag
     show_sim = False                    # toggle display of simulated course
     all_constraints = True              # toggle to return all critical angle constraint solutions or just the closest on either side of the current orientation
-    apply_fit = True                   # toggle whether to apply fit parameters to gimbal control or to simply calculate curve fit with no commands
-    if apply_fit:
-        atan_a, atan_b, atan_c, atan_d = -1.00000000e+00, 5.00000000e-02, -1.72300000e+00, -1.79407593e-09   # calculated parameters for arctangent curve fit
+
+    Va = 50.0
+    camera_roll_offset = np.radians(60)
 
     # Initialize simulator
-    x0 = np.array([[0, 0, 1000]]).T
-    xt0 = np.array([[0, 1723, 0]]).T
-    ypr0 = np.array([0, 0, 0])
-    ypr_g0 = np.array([0, 0, 0])
+    x0 = np.array([[-_x.item(0), 0, 1000]]).T
+    xt0 = np.array([[0, 0, 0]]).T
+    ypr0 = np.array([0, 0, np.arctan(Va**2/(9.81*_x.item(0)))])
+    ypr_g0 = np.array([0, 0, camera_roll_offset])
     h_fov = np.deg2rad(10)
     v_fov = np.deg2rad(10)
 
     sim = UAV_simulator(x0, xt0, ypr0, ypr_g0, h_fov, v_fov)
-
-    Va = 50.0
-    x = np.vstack([0*_t, Va*_t, 0*_t]) + x0.reshape(-1, 1)
-    xt = np.vstack([0*_t, 0*_t, 0*_t]) + xt0.reshape(-1, 1)
-    ypr = np.vstack([0*_t, 0*_t, 0*_t]) + ypr0.reshape(-1, 1)
-    if apply_fit:
-        ypr_g = np.vstack([0*_t, atan_fit(_t, atan_a, atan_b, atan_c, atan_d), 0*_t])
-    else:
-        ypr_g = np.vstack([0*_t, 0*_t, 0*_t]) + ypr_g0.reshape(-1, 1)
+    x = np.vstack([-_x, 0*_x, 0*_x]) + x0.reshape(-1, 1)
+    xt = np.vstack([0*_x, 0*_x, 0*_x]) + xt0.reshape(-1, 1)
+    ypr = np.vstack([0*_x, 0*_x, np.arctan(Va**2/(9.81*_x))])
+    ypr_g = np.vstack([0*_x, 0*_x, 0*_x]) + ypr_g0.reshape(-1, 1)
 
     for i in range(len(x[0])):
         sim.UpdateX(x[:, i], visualize=show_sim)
@@ -112,27 +107,26 @@ if __name__ == "__main__":
         sim.UpdateGimbalYPR(ypr_g[:, i], visualize=show_sim)
 
         v_combined = sim.GetAxes()
-        v_pg = v_combined[:, 4].reshape(-1, 1)
+        v_r = v_combined[:, 2].reshape(-1, 1)
 
-        angs_pg = sim.CalculateCriticalAngles(v_pg, all=all_constraints)
+        angs_r = sim.CalculateCriticalAngles(v_r, all=all_constraints)
 
         if init:
             init = False
             _in_sight = sim.in_sight
             _pi = sim.p_i
 
-            _a5 = angs_pg.reshape(-1, 1)
-            _a5 = np.sort(_a5, axis=0)
-
+            _a1 = angs_r.reshape(-1, 1)
+            _a1 = np.sort(_a1, axis=0)
         else:
             _in_sight = np.hstack((_in_sight, sim.in_sight))
             _pi = np.hstack((_pi, sim.p_i))
 
-            _a5 = np.hstack((_a5, angs_pg.reshape(-1, 1)))
-            _a5 = np.sort(_a5, axis=0)
+            _a1 = np.hstack((_a1, angs_r.reshape(-1, 1)))
+            _a1 = np.sort(_a1, axis=0)
 
     # convert angle limits to degrees
-    _a5 *= 180.0/np.pi
+    _a1 *= 180.0/np.pi
 
     # return to original UAV state for visualization accuracy
     sim.UpdateX(x0, visualize=show_sim)
@@ -140,50 +134,23 @@ if __name__ == "__main__":
     sim.UpdateYPR(ypr0, visualize=show_sim)
     sim.UpdateGimbalYPR(ypr_g0, visualize=show_sim)
 
-    ########################### Plot critical boundaries over time #########################
-    if ~apply_fit:
-        a0 = np.radians(60)/np.radians(90), 2.0, -34.0, 0
-        param, param_cov = curve_fit(atan_fit, _t, np.radians((_a5[0]+_a5[1])/2.0), a0)  # result => 1.00000001e+00  4.66578145e-02 -2.97448872e-01 -1.22585389e-08
-        print("Arctan curve fit parameters: ", param)
+    ########################### Plot critical boundaries over radii #########################
 
     plt.figure(3)
     plt.tight_layout()
 
-    # -------------------- plot rotation bounds for pitch gimbal --------------------
+    # -------------------- plot rotation bounds for roll --------------------
     plt.plot(np.array([0.0, 0.0]), np.array([0.0, 0.0]), 'b')  # dummy for legend
     plt.plot(np.array([0.0, 0.0]), np.array([0.0, 0.0]), 'r')  # dummy for legend
-    for j in range(len(_a5[0])):
-        zone_plot(_in_sight[j], _t[j], _a5[:, j].reshape(-1, 1))
-    plt.plot(_t, z_line, 'k--')
-    plt.plot(_t, u_line, 'k-')
-    plt.plot(_t, l_line, 'k-')
-    plt.title('Pitch Gimbal Axis Constraint Transform')
+    for j in range(len(_a1[0])):
+        zone_plot(_in_sight[j], _x[j], _a1[:, j].reshape(-1, 1))
+    plt.plot(_x, z_line, 'k--')
+    plt.plot(_x, u_line, 'k-')
+    plt.plot(_x, l_line, 'k-')
+    plt.title('Roll Axis Constraint Transform')
     plt.ylabel('Rotation Bounds (deg)')
-    plt.xlabel('Time (s)')
     plt.legend(("Visibility Region (In Region)", "Visibility Region (Out of Region)"))
+    plt.xlabel('Radius (m)')
 
     plt.pause(0.1)
-
-    ########################### Plot Target projetion path #########################
-
-    plt.figure(5)
-    if _in_sight[0]:
-        pp1 = plt.plot(_pi[0, 0], _pi[1, 0], markersize=15.0, markerfacecolor='b', marker='X', linestyle='None', markeredgecolor='k')
-    else:
-        pp1 = plt.plot(_pi[0, 0], _pi[1, 0], markersize=15.0, markerfacecolor='r', marker='X', linestyle='None', markeredgecolor='k')
-    pp2 = plt.plot(_pi[0, 1:][_in_sight[1:]], _pi[1, 1:][_in_sight[1:]], markersize=5.0, markerfacecolor='b', marker='o', linestyle='None', markeredgecolor='k')
-    pp3 = plt.plot(_pi[0, 1:][~_in_sight[1:]], _pi[1, 1:][~_in_sight[1:]], markersize=5.0, markerfacecolor='r', marker='o', linestyle='None', markeredgecolor='k')
-    pp4 = plt.plot(_pi[0], _pi[1], 'k', LineWidth=0.25)
-    pp5 = plt.plot(np.array([-sim.cam_lims[0, 0], sim.cam_lims[0, 0]]), np.array([sim.cam_lims[1, 0], sim.cam_lims[1, 0]]), 'b')
-    plt.plot(np.array([-sim.cam_lims[0, 0], sim.cam_lims[0, 0]]), np.array([-sim.cam_lims[1, 0], -sim.cam_lims[1, 0]]), 'b')
-    plt.plot(np.array([sim.cam_lims[0, 0], sim.cam_lims[0, 0]]), np.array([-sim.cam_lims[1, 0], sim.cam_lims[1, 0]]), 'b')
-    plt.plot(np.array([-sim.cam_lims[0, 0], -sim.cam_lims[0, 0]]), np.array([-sim.cam_lims[1, 0], sim.cam_lims[1, 0]]), 'b')
-    plt.legend(('Start', 'Projection (FOV)', 'Projection (not FOV)', 'Projection Path', 'Camera FOV Bounds'))
-    plt.title('Target Projection Path on Normalized Image Plane')
-    plt.xlabel('x')
-    plt.ylabel('y')
-    plt.axes().set_aspect('equal', 'datalim')
-    plt.axes().invert_yaxis()
-    plt.pause(0.1)
-
     plt.show()
