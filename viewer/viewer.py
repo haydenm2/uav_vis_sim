@@ -37,9 +37,9 @@ class vision_uav_viewer:
         # Setup plotting base for 3D sim
         fig = plt.figure(1, figsize=plt.figaspect(2.))
         self.ax = fig.add_subplot(2, 1, 1, projection='3d')  # plot axis handle
-        self.ax.set_xlim(-plt_range, plt_range)  # plotting x limit
-        self.ax.set_ylim(-plt_range, plt_range)  # plotting y limit
-        self.ax.set_zlim(-plt_range, 2.0)  # plotting z limit
+        self.ax.set_xlim3d(-plt_range, plt_range)  # plotting x limit
+        self.ax.set_ylim3d(-plt_range, plt_range)  # plotting y limit
+        self.ax.set_zlim3d(-plt_range, 2.0)  # plotting z limit
         self.ax.set_title('3D Sim')  # plotting title
         self.ax.set_xlabel('N')  # plotting x axis label
         self.ax.set_ylabel('E')  # plotting y axis label
@@ -306,11 +306,10 @@ class vision_uav_viewer:
 
             # resize plot
             plot_buff = 10.0
-            plot_size = np.max(np.abs(self.x-self.xt)) + plot_buff
-            plot_center = self.x-self.xt
-            self.ax.set_xlim(-plot_size+plot_center.item(0), plot_size+plot_center.item(0))  # plotting x limit
-            self.ax.set_ylim(-plot_size+plot_center.item(1), plot_size+plot_center.item(1))  # plotting y limit
-            self.ax.set_zlim(-plot_size+plot_center.item(2), 0.0)  # plotting z limit
+            plot_size = np.max(np.vstack((self.x, self.xt))) + plot_buff
+            self.ax.set_xlim3d(-plot_size, plot_size)  # plotting x limit
+            self.ax.set_ylim3d(-plot_size, plot_size)  # plotting y limit
+            self.ax.set_zlim3d(-plot_size, 0.0)  # plotting z limit
             self.ax.invert_yaxis()
             self.ax.invert_zaxis()
             # self.ax.autoscale_view()

@@ -13,6 +13,7 @@ from message_types.msg_state import msg_state
 
 from viewer.viewer import vision_uav_viewer
 from dynamics.uav_dynamics import uav_dynamics
+from dynamics.target_dynamics import target_dynamics
 from dynamics.wind_simulation import wind_simulation
 import parameters.aerosonde_parameters as UAV
 import parameters.target_parameters as TAR
@@ -28,6 +29,7 @@ uav_view = vision_uav_viewer(x0=np.array([[UAV.pn0], [UAV.pe0], [UAV.pd0]]),
 # initialize elements of the architecture
 wind = wind_simulation(SIM.ts_simulation)
 uav = uav_dynamics(SIM.ts_simulation)
+target = target_dynamics(SIM.ts_simulation)
 
 # initialize the simulation time
 sim_time = SIM.start_time
@@ -65,8 +67,10 @@ while sim_time < SIM.end_time:
     #-------physical system-------------
     current_wind = wind.update()  # get the new wind vector
     uav.update_state(delta, current_wind)  # propagate the MAV dynamics
+    target.update_state()  # propagate the MAV dynamics
     if not crash_flag:
         uav_state = uav.msg_true_state
+        target_state = target.msg_true_state
         if uav_state.h <= 0:
             uav_state.h = 0
             crash_flag = True
@@ -85,7 +89,7 @@ while sim_time < SIM.end_time:
     #-------update viewer-------------
     if sim_time % SIM.ts_plotting < SIM.ts_simulation:
         uav_view.UpdateUAV(np.array((uav_state.pn, uav_state.pe, -uav_state.h)), np.array((uav_state.psi, uav_state.theta, uav_state.phi)), np.array((uav_state.psi_g, uav_state.theta_g, uav_state.phi_g)))  # update UAV viewer
-        uav_view.UpdateTarget(np.array((0.0, 0.0, 0.0)))  # update target viewer
+        uav_view.UpdateTarget(np.array((target_state.pn, target_state.pe, -target_state.h)))  # update target viewer
 
     #-------increment time-------------
     sim_time += SIM.ts_simulation
